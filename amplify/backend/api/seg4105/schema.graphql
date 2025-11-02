@@ -1,0 +1,37 @@
+type User @model @auth(rules: [{allow: owner}]) {
+  id: ID!
+  email: AWSEmail!
+  firstName: String
+  lastName: String
+  dob: AWSDate
+  gender: String
+  height: Float
+  weight: Float
+  goal: Goal
+  age: Int
+  goalDate: AWSDate
+  calorieGoal: Int
+  meals: [Meal] @hasMany
+}
+
+enum Goal {
+  LOSE_WEIGHT
+  MAINTAIN_WEIGHT
+  GAIN_WEIGHT
+}
+
+type Meal @model @auth(rules: [{allow: owner}]) {
+  id: ID!
+  date: AWSDateTime!
+  mealType: MealType!
+  calories: Int!
+  estimatedIngredients: [String]
+  user: User @belongsTo
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
