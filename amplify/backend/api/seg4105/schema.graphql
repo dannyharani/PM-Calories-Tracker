@@ -1,4 +1,9 @@
-type User @model @auth(rules: [{allow: owner}]) {
+type User @model
+  @auth(rules: [
+    { allow: private, operations: [create] },
+    { allow: owner, ownerField: "id", operations: [read, update, delete] }
+  ])
+{
   id: ID!
   email: AWSEmail!
   firstName: String

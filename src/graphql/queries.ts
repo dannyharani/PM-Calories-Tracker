@@ -28,7 +28,6 @@ export const getUser = /* GraphQL */ `query GetUser($id: ID!) {
     }
     createdAt
     updatedAt
-    owner
     __typename
   }
 }
@@ -54,7 +53,6 @@ export const listUsers = /* GraphQL */ `query ListUsers(
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
     nextToken
@@ -84,9 +82,9 @@ export const getMeal = /* GraphQL */ `query GetMeal($id: ID!) {
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
+    dateTime
     createdAt
     updatedAt
     userMealsId
@@ -107,6 +105,7 @@ export const listMeals = /* GraphQL */ `query ListMeals(
       mealType
       calories
       estimatedIngredients
+      dateTime
       createdAt
       updatedAt
       userMealsId

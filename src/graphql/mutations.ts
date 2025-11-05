@@ -31,7 +31,6 @@ export const createUser = /* GraphQL */ `mutation CreateUser(
     }
     createdAt
     updatedAt
-    owner
     __typename
   }
 }
@@ -62,7 +61,6 @@ export const updateUser = /* GraphQL */ `mutation UpdateUser(
     }
     createdAt
     updatedAt
-    owner
     __typename
   }
 }
@@ -93,7 +91,6 @@ export const deleteUser = /* GraphQL */ `mutation DeleteUser(
     }
     createdAt
     updatedAt
-    owner
     __typename
   }
 }
@@ -126,9 +123,9 @@ export const createMeal = /* GraphQL */ `mutation CreateMeal(
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
+    dateTime
     createdAt
     updatedAt
     userMealsId
@@ -165,9 +162,9 @@ export const updateMeal = /* GraphQL */ `mutation UpdateMeal(
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
+    dateTime
     createdAt
     updatedAt
     userMealsId
@@ -204,9 +201,9 @@ export const deleteMeal = /* GraphQL */ `mutation DeleteMeal(
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
+    dateTime
     createdAt
     updatedAt
     userMealsId

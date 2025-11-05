@@ -10,9 +10,9 @@ type GeneratedSubscription<InputType, OutputType> = string & {
 
 export const onCreateUser = /* GraphQL */ `subscription OnCreateUser(
   $filter: ModelSubscriptionUserFilterInput
-  $owner: String
+  $id: String
 ) {
-  onCreateUser(filter: $filter, owner: $owner) {
+  onCreateUser(filter: $filter, id: $id) {
     id
     email
     firstName
@@ -31,7 +31,6 @@ export const onCreateUser = /* GraphQL */ `subscription OnCreateUser(
     }
     createdAt
     updatedAt
-    owner
     __typename
   }
 }
@@ -41,9 +40,9 @@ export const onCreateUser = /* GraphQL */ `subscription OnCreateUser(
 >;
 export const onUpdateUser = /* GraphQL */ `subscription OnUpdateUser(
   $filter: ModelSubscriptionUserFilterInput
-  $owner: String
+  $id: String
 ) {
-  onUpdateUser(filter: $filter, owner: $owner) {
+  onUpdateUser(filter: $filter, id: $id) {
     id
     email
     firstName
@@ -62,7 +61,6 @@ export const onUpdateUser = /* GraphQL */ `subscription OnUpdateUser(
     }
     createdAt
     updatedAt
-    owner
     __typename
   }
 }
@@ -72,9 +70,9 @@ export const onUpdateUser = /* GraphQL */ `subscription OnUpdateUser(
 >;
 export const onDeleteUser = /* GraphQL */ `subscription OnDeleteUser(
   $filter: ModelSubscriptionUserFilterInput
-  $owner: String
+  $id: String
 ) {
-  onDeleteUser(filter: $filter, owner: $owner) {
+  onDeleteUser(filter: $filter, id: $id) {
     id
     email
     firstName
@@ -93,7 +91,6 @@ export const onDeleteUser = /* GraphQL */ `subscription OnDeleteUser(
     }
     createdAt
     updatedAt
-    owner
     __typename
   }
 }
@@ -126,9 +123,9 @@ export const onCreateMeal = /* GraphQL */ `subscription OnCreateMeal(
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
+    dateTime
     createdAt
     updatedAt
     userMealsId
@@ -165,9 +162,9 @@ export const onUpdateMeal = /* GraphQL */ `subscription OnUpdateMeal(
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
+    dateTime
     createdAt
     updatedAt
     userMealsId
@@ -204,9 +201,9 @@ export const onDeleteMeal = /* GraphQL */ `subscription OnDeleteMeal(
       calorieGoal
       createdAt
       updatedAt
-      owner
       __typename
     }
+    dateTime
     createdAt
     updatedAt
     userMealsId
