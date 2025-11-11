@@ -45,7 +45,7 @@ export default function HomeScreen() {
           </View>
         )}
         <View style={styles.buttonWrapper}>
-          <Button title="Continue as Guest" onPress={() => router.push('/explore')} />
+          <Button title="Continue as Guest" onPress={() => router.push('/capture')} />
         </View>
       </View>
     </ThemedView>

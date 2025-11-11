@@ -1,14 +1,16 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 // Avatar uses ThemedText initial; IconSymbol import removed
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { deleteUser as deleteUserMutation } from '@/src/graphql/mutations';
 import { getUser, listMeals } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { generateClient } from 'aws-amplify/api';
 import { deleteUser as deleteUserAuth, getCurrentUser, signOut } from 'aws-amplify/auth';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { showAlert, showConfirm } from '../utils/alert';
 
@@ -30,6 +32,7 @@ export default function DashboardScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const router = useRouter();
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
 
   // Helpers to format dates for HTML date inputs and parse them as local dates
   const formatDateForInput = (d: Date) => {
@@ -44,6 +47,14 @@ export default function DashboardScreen() {
     const parts = s.split('-').map((p) => parseInt(p, 10));
     if (parts.length !== 3) return new Date(s);
     return new Date(parts[0], parts[1] - 1, parts[2]);
+  };
+
+  const formatDateShort = (d: Date) => {
+    try {
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return formatDateForInput(d);
+    }
   };
   useEffect(() => {
     let mounted = true;
@@ -125,6 +136,42 @@ export default function DashboardScreen() {
     console.log(selectedDate)
   }, [selectedDate, userId]);
 
+  // Small presentational component for a meal row
+  const MealRow = ({ meal, onPress }: { meal: any; onPress?: () => void }) => {
+    const dateStr = meal?.date || meal?.dateTime || meal?.createdAt || '';
+    let timeLabel = '';
+    try {
+      const dt = new Date(dateStr);
+      timeLabel = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      // ignore parse errors
+    }
+
+    // potential thumbnail fields (app may not store photos yet)
+    const thumbUrl = meal?.photo || meal?.image || meal?.imageUrl || meal?.thumbnail || meal?.s3Key || null;
+
+    return (
+      <TouchableOpacity onPress={onPress} style={styles.mealRow} accessibilityRole="link">
+        <View style={styles.mealThumbWrapper}>
+          {thumbUrl ? (
+            <Image source={{ uri: thumbUrl }} style={styles.thumbnail} />
+          ) : (
+            <View style={[styles.thumbnail, { backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' }]}>
+              <ThemedText style={{ fontSize: 18 }}>🍴</ThemedText>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.mealLeft}>
+          <ThemedText style={styles.mealTitle}>{`${meal.mealType}: ${meal.calories} cal`}</ThemedText>
+          <ThemedText style={styles.mealTime}>{timeLabel}</ThemedText>
+        </View>
+
+        <IconSymbol name="chevron.right" size={18} color={iconColor as string} />
+      </TouchableOpacity>
+    );
+  };
+
   const handleSignOut = async () => {
     setIsSigningOut(true);
     setStatusMessage('Signing out...');
@@ -179,28 +226,45 @@ export default function DashboardScreen() {
           <ThemedText style={{ fontSize: 16, color: iconColor as any }}>{firstName ? firstName.charAt(0).toUpperCase() : '👤'}</ThemedText>
         </TouchableOpacity>
       </View>
-      {/* Date picker to select which day's meals to view */}
+      {/* Date pill — shows short date and opens picker when pressed */}
+      <ThemedText>{firstName ? `Hello, ${firstName}` : 'Welcome to your dashboard!'}</ThemedText>
       <View style={styles.dateRow}>
-        <ThemedText style={{ marginRight: 8 }}>Selected date:</ThemedText>
+        <TouchableOpacity
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              // try to focus then click the hidden native date input to open browser picker
+              try {
+                dateInputRef.current?.focus?.();
+                dateInputRef.current?.click?.();
+              } catch {
+                // ignore
+              }
+            } else {
+              setShowDatePicker(true);
+            }
+          }}
+          style={[styles.datePill, { borderColor: menuBorder as any, backgroundColor: menuBg as any }]}
+        >
+          <ThemedText style={styles.datePillText}>{formatDateShort(selectedDate)}</ThemedText>
+        </TouchableOpacity>
+
+        {/* hidden input used on web to trigger native date picker UI */}
         {Platform.OS === 'web' ? (
           <input
+            ref={dateInputRef}
             type="date"
             value={formatDateForInput(selectedDate)}
             onChange={(e: any) => setSelectedDate(e.target.value ? parseDateFromInput(e.target.value) : new Date())}
-            style={{ height: 36, padding: 8, borderRadius: 6, borderWidth: 1, borderColor: menuBorder as any, backgroundColor: menuBg as any, color: iconColor as any }}
+            // keep the input in the DOM but visually hidden so programmatic click can open the picker
+            style={{ position: 'absolute', opacity: 0, width: 1, height: 1, left: -9999 }}
           />
-        ) : (
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[styles.dateButton, { borderColor: menuBorder as any, backgroundColor: menuBg as any }]}>
-            <ThemedText>{formatDateForInput(selectedDate)}</ThemedText>
-          </TouchableOpacity>
-        )}
+        ) : null}
       </View>
-      <ThemedText>{firstName ? `Hello, ${firstName}` : 'Welcome to your dashboard!'}</ThemedText>
       {/* Today's calories summary and progress */}
       {calorieGoal ? (
         <View style={{ width: '100%', marginTop: 16 }}>
-          <ThemedText style={{ marginBottom: 6 }}>{"Today's calories: "}{todayCalories}{' kcal'}</ThemedText>
-          <ThemedText style={{ marginBottom: 6 }}>{'Goal: '}{calorieGoal}{' kcal'}</ThemedText>
+          <ThemedText style={{ marginBottom: 6 }}>{"Today's calories: "}{todayCalories}{' cal'}</ThemedText>
+          <ThemedText style={{ marginBottom: 6 }}>{'Goal: '}{calorieGoal}{' cal'}</ThemedText>
           <View style={styles.progressBar}>
             <View
               style={[
@@ -214,17 +278,18 @@ export default function DashboardScreen() {
           </View>
           <ThemedText style={{ marginTop: 6 }}>
             {todayCalories > calorieGoal
-              ? `Over by ${todayCalories - calorieGoal} kcal`
-              : `Remaining ${calorieGoal - todayCalories} kcal`}
+              ? `Over by ${todayCalories - calorieGoal} cal`
+              : `Remaining ${calorieGoal - todayCalories} cal`}
           </ThemedText>
           {mealsToday && mealsToday.length > 0 ? (
-            <View style={{ marginTop: 8 }}>
-              {mealsToday.map((m: any) => (
-                <TouchableOpacity key={m.id} onPress={() => router.push({ pathname: '/meal/[id]', params: { id: m.id } })} style={{ paddingVertical: 6 }}>
-                  <ThemedText style={{ fontSize: 14 }}>{`${m.mealType}: ${m.calories} kcal`}</ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
+                <View style={{ marginTop: 8 }}>
+                  {mealsToday.map((m: any, idx: number) => (
+                    <React.Fragment key={m.id}>
+                      <MealRow meal={m} onPress={() => router.push({ pathname: '/meal/[id]', params: { id: m.id } })} />
+                      {idx < mealsToday.length - 1 ? <View style={styles.divider} /> : null}
+                    </React.Fragment>
+                  ))}
+                </View>
           ) : null}
         </View>
       ) : (
@@ -314,11 +379,66 @@ const styles = StyleSheet.create({
     marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   dateButton: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderWidth: 1,
     borderRadius: 6,
+  },
+  datePill: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  datePillText: {
+    marginRight: 8,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  datePillIcon: {
+    fontSize: 14,
+  },
+  mealRow: {
+    width: '100%',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  mealLeft: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  mealTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  mealTime: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
+  mealThumbWrapper: {
+    width: 56,
+    height: 56,
+    marginRight: 10,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  thumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#8a8a8aff',
+    width: '100%',
   },
 });

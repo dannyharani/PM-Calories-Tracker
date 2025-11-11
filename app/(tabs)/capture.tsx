@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { createMeal as createMealMutation } from '@/src/graphql/mutations';
+import { Picker } from '@react-native-picker/picker';
 import { generateClient } from 'aws-amplify/api';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { Image } from 'expo-image';
@@ -12,7 +13,7 @@ import { Button, Platform, StyleSheet, TextInput, View } from 'react-native';
 
 const client = generateClient();
 
-export default function ExploreTab() {
+export default function CaptureTab() {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [mealType, setMealType] = useState<string>('LUNCH');
   const [calories, setCalories] = useState<string>('450');
@@ -92,7 +93,7 @@ export default function ExploreTab() {
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          style={{ marginTop: 8, backgroundColor: bgColor as any, color: textColor as any, borderColor: borderColor as any, borderWidth: 1, padding: 8, borderRadius: 6 }}
+          style={{ marginTop: 8, backgroundColor: bgColor as any, color: textColor as any, borderColor: borderColor as any, borderWidth: 1, paddingLeft: 10, paddingRight: 10, paddingTop: 0, paddingBottom: 0, boxSizing: 'border-box', borderRadius: 6, width: 300, height: 40 }}
         />
       ) : (
         <Button title="Select photo (native not implemented)" onPress={() => {}} />
@@ -108,19 +109,43 @@ export default function ExploreTab() {
 
       <ThemedText style={{ marginBottom: 6 }}>Estimated / Edit</ThemedText>
       <View style={{ width: '100%' }}>
-        <TextInput value={mealType} onChangeText={setMealType} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
+        {/* Meal type: dropdown on native, select on web */}
+        {Platform.OS === 'web' ? (
+          <select
+            value={mealType}
+            onChange={(e: any) => setMealType(e.target.value)}
+            style={{ height: 40, width: 300, borderWidth: 1, paddingLeft: 10, paddingRight: 10, paddingTop: 0, paddingBottom: 0, boxSizing: 'border-box', borderRadius: 6, marginBottom: 8, borderColor: borderColor as any, backgroundColor: bgColor as any, color: textColor as any, lineHeight: '40px' }}
+          >
+            <option value="BREAKFAST">Breakfast</option>
+            <option value="LUNCH">Lunch</option>
+            <option value="DINNER">Dinner</option>
+            <option value="SNACK">Snack</option>
+          </select>
+        ) : (
+          <View style={[styles.pickerWrapper, { borderColor: borderColor as any, backgroundColor: bgColor as any }]}>
+            <Picker selectedValue={mealType} onValueChange={(v) => setMealType(String(v))} style={{ flex: 1 }}>
+              <Picker.Item label="Breakfast" value="BREAKFAST" />
+              <Picker.Item label="Lunch" value="LUNCH" />
+              <Picker.Item label="Dinner" value="DINNER" />
+              <Picker.Item label="Snack" value="SNACK" />
+            </Picker>
+          </View>
+        )}
+
         <TextInput value={calories} onChangeText={setCalories} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} keyboardType="numeric" />
         <TextInput value={ingredients} onChangeText={setIngredients} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
+
         {Platform.OS === 'web' ? (
           <input
             type="date"
-            value={date}
+            value={date.includes('T') ? date.split('T')[0] : date}
             onChange={(e: any) => setDate(e.target.value)}
-            style={{ marginTop: 8, backgroundColor: bgColor as any, color: textColor as any, borderColor: borderColor as any, borderWidth: 1, padding: 8, borderRadius: 6 }}
+            style={{ height: 40, width: 300, borderWidth: 1, paddingLeft: 10, paddingRight: 10, paddingTop: 0, paddingBottom: 0, boxSizing: 'border-box', borderRadius: 6, marginBottom: 8, borderColor: borderColor as any, backgroundColor: bgColor as any, color: textColor as any, lineHeight: '40px' }}
           />
         ) : (
           <TextInput value={date} onChangeText={setDate} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
         )}
+
         <TextInput value={time} onChangeText={setTime} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
       </View>
 
@@ -145,5 +170,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 6,
     marginBottom: 8,
+  },
+  pickerWrapper: {
+    height: 40,
+    width: 300,
+    borderWidth: 1,
+    borderRadius: 6,
+    marginBottom: 8,
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
 });
