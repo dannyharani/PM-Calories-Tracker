@@ -210,7 +210,12 @@ export default function DashboardScreen() {
       </View>
   <ThemedText>{firstName ? `Hello, ${firstName}` : 'Welcome to your dashboard!'}</ThemedText>
   <View style={{ height: 8 }} />
-  <Button title="Add meal" onPress={() => router.push('/(tabs)/meal/add')} />
+  <Button
+        title="Add meal"
+        onPress={() =>
+          router.push({ pathname: '/(tabs)/meal/add', params: { date: formatDateForInput(selectedDate) } })
+        }
+      />
       {/* Today's calories summary and progress */}
       {calorieGoal ? (
         <View style={styles.card}>

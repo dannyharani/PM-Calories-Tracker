@@ -16,6 +16,7 @@ export default function MealDetail() {
   const [meal, setMeal] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -56,6 +57,7 @@ export default function MealDetail() {
         }
       } catch (err) {
         console.warn('Could not load meal', err);
+        setErrorMsg((err as any)?.message || 'Failed to load meal');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -82,7 +84,13 @@ export default function MealDetail() {
   return (
     <ThemedView style={styles.container}>
       {loading && <ThemedText>Loading…</ThemedText>}
-      {!loading && !meal && <ThemedText>No meal found.</ThemedText>}
+      {!loading && !meal && (
+        <View style={{ width: '100%' }}>
+          <ThemedText>No meal found.</ThemedText>
+          {id ? <ThemedText style={{ opacity: 0.8, marginTop: 4 }}>Meal ID: {String(id)}</ThemedText> : null}
+          {errorMsg ? <ThemedText style={{ color: '#e74c3c', marginTop: 6 }}>{errorMsg}</ThemedText> : null}
+        </View>
+      )}
       {meal && (
         <View style={{ width: '100%' }}>
           {/* Summary Card */}

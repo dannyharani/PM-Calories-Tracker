@@ -7,7 +7,7 @@ import { Picker } from '@react-native-picker/picker';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { uploadData } from 'aws-amplify/storage';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Button, Image, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { estimateFromLabels, estimateFromMealType, MealType as EstMealType } from '../../../src/utils/macroEstimator';
@@ -26,6 +26,7 @@ type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
 
 export default function AddMealScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const borderColor = useThemeColor({}, 'icon');
   const textColor = useThemeColor({}, 'text');
 
@@ -87,8 +88,16 @@ export default function AddMealScreen() {
       const user = await getCurrentUser();
       const userId = (user as any)?.userId || (user as any)?.username;
       if (!userId) throw new Error('Not signed in');
-
-      const nowIso = new Date().toISOString();
+      // If a date param (YYYY-MM-DD) was provided, use that calendar date combined with current time-of-day.
+      const dateParam = Array.isArray(params?.date) ? params.date[0] : (params?.date as string | undefined);
+      const now = new Date();
+      let mealDate = now;
+      if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+        const [y, m, d] = dateParam.split('-').map((s) => parseInt(s, 10));
+        // Construct local time on the selected calendar date with current time components
+        mealDate = new Date(y, (m as number) - 1, d as number, now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      }
+      const nowIso = mealDate.toISOString();
       const est = estimation || estimateFromMealType(mealType as EstMealType);
       let photoKey: string | undefined;
       if (photoUri && isStorageConfigured()) {
@@ -97,7 +106,26 @@ export default function AddMealScreen() {
         const blob = await response.blob();
         const ext = photoUri.split('.').pop() || 'jpg';
         const key = `meal-photos/${userId}/${Date.now()}.${ext}`;
-        await uploadData({ key, data: blob, options: { contentType: (blob as any).type || 'image/jpeg' } }).result;
+        await uploadData({
+          key,
+          data: blob,
+          options: {
+            contentType: (blob as any).type || 'image/jpeg',
+            // Attach useful metadata for later retrieval
+            metadata: {
+              app: 'pm-calories-tracker',
+              userId: String(userId),
+              mealType: String(mealType),
+              date: String(nowIso),
+              calories: String(Math.round(est.calories)),
+              proteinGrams: String(est.proteinGrams),
+              carbsGrams: String(est.carbsGrams),
+              fatGrams: String(est.fatGrams),
+              estimateConfidence: String(est.estimateConfidence),
+              labels: JSON.stringify(parsedLabels),
+            },
+          },
+        }).result;
         photoKey = key;
       } else if (photoUri && !isStorageConfigured()) {
         // Do not block saving the meal; just inform the user.
