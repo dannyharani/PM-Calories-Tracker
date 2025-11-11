@@ -2,7 +2,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
-import { createUser as createUserMutation, updateUser as updateUserMutation } from '@/src/graphql/mutations';
+import { saveProfile } from '@/src/data/saveProfile';
+import { createUser as createUserMutation } from '@/src/graphql/mutations';
 import { getUser as getUserQuery } from '@/src/graphql/queries';
 import { uploadPhotoBlob } from '@/src/storage';
 import { fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
@@ -137,7 +138,6 @@ export default function ProfileSettings() {
       const uri = asset?.uri;
       if (!uri) return;
       setPreviewUri(uri);
-      // Convert URI to Blob and upload
       const blob = await (await fetch(uri)).blob();
       const current = await getCurrentUser();
       const userId = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
@@ -145,22 +145,11 @@ export default function ProfileSettings() {
       const key = await uploadPhotoBlob(blob as any, String(userId));
       setPhotoKey(key);
       Alert.alert('Uploaded!', `S3 key:\n${key}`);
-      // Try to persist key to User.profile (requires backend to have photoKey field)
       try {
-        const client = await getGraphQLClient();
-        const authMode = await getPreferredAuthMode();
-        const updateUserPhoto = /* GraphQL */ `
-          mutation UpdateUserPhoto($input: UpdateUserInput!) {
-            updateUser(input: $input) { id photoKey }
-          }
-        `;
-        await (client as any).graphql({
-          query: updateUserPhoto,
-          variables: { input: { id: String(userId), photoKey: key } },
-          ...(authMode ? { authMode } : {}),
-        });
+        // Persist key if backend supports it
+        await saveProfile({ id: String(userId), photoKey: key });
       } catch {
-        // Likely schema not yet pushed; keep key locally and allow retry after push
+        // ignore if schema not yet pushed
       }
     } catch (e: any) {
       Alert.alert('Upload failed', e?.message || 'Unable to upload photo');
@@ -172,35 +161,35 @@ export default function ProfileSettings() {
     setStatusMsg('');
     setSaving(true);
     try {
-      const user = await getCurrentUser();
-      const id = (user as any)?.userId || (user as any)?.attributes?.sub || (user as any)?.username;
+      const current = await getCurrentUser();
+      const id = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
       if (!id) throw new Error('No authenticated user');
       const input: any = {
         id,
         firstName: firstName || null,
         lastName: lastName || null,
         gender: gender || null,
-        height: height ? parseFloat(height) : null,
-        weight: weight ? parseFloat(weight) : null,
-        dob: dob || null,
-        age: dobToAge(dob),
-        goal: goal || null,
-        calorieGoal: calorieGoal || null,
+        height: height ? parseFloat(height) : undefined,
+        weight: weight ? parseFloat(weight) : undefined,
+        dob: dob || undefined,
+        goal: goal || undefined,
+        calorieGoal: typeof calorieGoal === 'number' ? calorieGoal : undefined,
+        photoKey: photoKey || undefined,
       };
-  const client = await getGraphQLClient();
-  const authMode = await getPreferredAuthMode();
-      const mutationToUse = isExistingUser ? updateUserMutation : createUserMutation;
-      // include email on create to satisfy schema
-      if (!isExistingUser) {
+      if (isExistingUser) {
+        await saveProfile(input);
+      } else {
+        // Create requires email
+        const client = await getGraphQLClient();
+        const authMode = await getPreferredAuthMode();
         try {
           const attrs = await fetchUserAttributes();
           (input as any).email = attrs?.email || null;
         } catch {}
+        const resp: any = await (client as any).graphql({ query: createUserMutation, variables: { input }, ...(authMode ? { authMode } : {}) });
+        if (resp.errors) throw new Error(resp.errors[0]?.message || 'Create failed');
       }
-  const resp: any = await client.graphql({ query: mutationToUse, variables: { input }, ...(authMode ? { authMode } : {}) });
-      if (resp.errors) throw new Error(resp.errors[0]?.message || 'Update failed');
       setStatusMsg('Profile updated');
-      // Give quick feedback then navigate back
       setTimeout(() => router.back(), 600);
     } catch (e: any) {
       setErrorMsg(e?.message || 'Failed to save changes');

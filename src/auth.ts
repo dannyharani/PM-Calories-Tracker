@@ -15,3 +15,10 @@ export async function ensureSignedIn(options?: { demo?: { username: string; pass
     return false;
   }
 }
+
+// Strict helper: throws if not signed in. Use before GraphQL calls when you expect an authenticated owner context.
+export async function requireUser() {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('Not signed in');
+  return user;
+}

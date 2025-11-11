@@ -4,13 +4,8 @@
     "apiName": "pmcaloriestracker",
     "serviceName": "AppSync",
     "defaultAuthType": {
-      "mode": "AMAZON_COGNITO_USER_POOLS"
-    },
-    "additionalAuthTypes": [
-      {
-        "mode": "API_KEY",
-        "expirationTime": 7
-      }
-    ]
+      "mode": "API_KEY",
+      "expirationTime": 7
+    }
   }
 }
