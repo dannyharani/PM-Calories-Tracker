@@ -145,7 +145,14 @@ export default function AddMealScreen() {
       </View>
 
       <View style={styles.row}>
-        <Button title={photoUri ? 'Retake Photo' : 'Take Photo'} onPress={pickPhoto} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <View style={{ marginRight: 8 }}>
+            <Button title={photoUri ? 'Retake Photo' : 'Take Photo'} onPress={pickPhoto} />
+          </View>
+          {photoUri ? (
+            <Button title="Clear Photo" color="#d9534f" onPress={() => setPhotoUri(null)} />
+          ) : null}
+        </View>
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
         ) : null}
