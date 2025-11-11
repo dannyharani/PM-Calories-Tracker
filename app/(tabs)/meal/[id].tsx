@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { ensureSignedIn } from '@/src/auth';
+import { getMeal } from '@/src/local/mealStore';
 // Use storage helpers to get signed URL and metadata
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -27,33 +27,13 @@ export default function MealDetail() {
 
   useEffect(() => {
     let mounted = true;
-    const GET_MEAL_DETAIL = /* GraphQL */ `
-      query GetMeal($id: ID!) {
-        getMeal(id: $id) {
-          id
-          date
-          mealType
-          calories
-          estimatedIngredients
-          proteinGrams
-          carbsGrams
-          fatGrams
-          estimateConfidence
-          dateTime
-          photoKey
-        }
-      }
-    `;
-  const load = async () => {
+    const load = async () => {
       if (!id) return;
       setLoading(true);
       try {
-    const ok = await ensureSignedIn();
-    if (!ok) throw new Error('Not signed in');
-  const client = await getGraphQLClient();
-  const authMode = await getPreferredAuthMode();
-  const res: any = await client.graphql({ query: GET_MEAL_DETAIL, variables: { id }, ...(authMode ? { authMode } : {}) });
-        const data = res?.data?.getMeal;
+        const ok = await ensureSignedIn();
+        if (!ok) throw new Error('Not signed in');
+        const data = await getMeal(id);
         if (mounted) setMeal(data || null);
         if (mounted && data?.photoKey && isStorageConfigured()) {
           try {

@@ -1,11 +1,9 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
+// Offline-first: remove GraphQL dependency for profile persistence; keep Amplify only for photo upload.
 import { ensureSignedIn } from '@/src/auth';
-import { saveProfile } from '@/src/data/saveProfile';
-import { createUser as createUserMutation } from '@/src/graphql/mutations';
-import { getUser as getUserQuery } from '@/src/graphql/queries';
+import { loadLocalProfile, mergeLocalProfile, saveLocalProfile } from '@/src/local/profileStore';
 import { uploadPhotoBlob } from '@/src/storage';
 import { fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
 import * as ImagePicker from 'expo-image-picker';
@@ -33,7 +31,6 @@ export default function ProfileSettings() {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [statusMsg, setStatusMsg] = useState<string>('');
-  const [isExistingUser, setIsExistingUser] = useState<boolean>(false);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [photoKey, setPhotoKey] = useState<string | null>(null);
 
@@ -97,33 +94,25 @@ export default function ProfileSettings() {
         const current = await getCurrentUser();
         const id = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
         if (!id) throw new Error('No authenticated user');
-        const client = await getGraphQLClient();
-        const authMode = await getPreferredAuthMode();
-        const resp: any = await client.graphql({ query: getUserQuery, variables: { id }, ...(authMode ? { authMode } : {}) });
-        const u = resp?.data?.getUser;
-        if (u && mounted) {
-          setIsExistingUser(true);
-          setFirstName(u.firstName || '');
-          setLastName(u.lastName || '');
-          setGender(u.gender || '');
-          setHeight(u.height ? String(u.height) : '');
-          setWeight(u.weight ? String(u.weight) : '');
-          setDob(u.dob || '');
-          if (u.goal) setGoal(u.goal);
-          if (typeof u.calorieGoal === 'number') setCalorieGoal(u.calorieGoal);
-          if (u.photoKey) setPhotoKey(u.photoKey);
-        } else if (!u) {
+        // Attempt to load locally stored profile first
+        const local = await loadLocalProfile();
+        if (local && local.id === id) {
+          setFirstName(local.firstName || '');
+          setLastName(local.lastName || '');
+          setGender(local.gender || '');
+          setHeight(local.height != null ? String(local.height) : '');
+          setWeight(local.weight != null ? String(local.weight) : '');
+          setDob(local.dob || '');
+          if (local.goal) setGoal(local.goal);
+          if (typeof local.calorieGoal === 'number') setCalorieGoal(local.calorieGoal);
+          if (local.photoKey) setPhotoKey(local.photoKey);
+        } else {
+          // Seed from user attributes if available
           const attrs = await fetchUserAttributes();
           setFirstName(attrs?.name || '');
-          setIsExistingUser(false);
         }
       } catch (e: any) {
-        try {
-          const attrs = await fetchUserAttributes();
-          setFirstName(attrs?.name || '');
-          setIsExistingUser(false);
-        } catch {}
-        setErrorMsg(e?.message || 'Failed to load profile. You can still enter details and save.');
+        setErrorMsg(e?.message || 'Failed to load profile. You can still enter details and save locally.');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -146,22 +135,17 @@ export default function ProfileSettings() {
       });
       if ((result as any).canceled) return;
       const asset = (result as any).assets?.[0];
-      const uri = asset?.uri;
-      if (!uri) return;
-      setPreviewUri(uri);
-      const blob = await (await fetch(uri)).blob();
+      if (!asset?.uri) return;
+      setPreviewUri(asset.uri);
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
       const current = await getCurrentUser();
       const userId = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
       if (!userId) throw new Error('Not signed in');
       const key = await uploadPhotoBlob(blob as any, String(userId));
       setPhotoKey(key);
-      Alert.alert('Uploaded!', `S3 key:\n${key}`);
-      try {
-        // Persist key if backend supports it
-        await saveProfile({ id: String(userId), photoKey: key });
-      } catch {
-        // ignore if schema not yet pushed
-      }
+      await mergeLocalProfile({ id: String(userId), photoKey: key });
+      Alert.alert('Uploaded!', `Photo stored. Key:\n${key}`);
     } catch (e: any) {
       Alert.alert('Upload failed', e?.message || 'Unable to upload photo');
     }
@@ -175,32 +159,20 @@ export default function ProfileSettings() {
       const current = await getCurrentUser();
       const id = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
       if (!id) throw new Error('No authenticated user');
-      const input: any = {
+      const localProfile = {
         id,
         firstName: firstName || null,
         lastName: lastName || null,
         gender: gender || null,
-        height: height ? parseFloat(height) : undefined,
-        weight: weight ? parseFloat(weight) : undefined,
-        dob: dob || undefined,
-        goal: goal || undefined,
-        calorieGoal: typeof calorieGoal === 'number' ? calorieGoal : undefined,
-        photoKey: photoKey || undefined,
+        height: height ? parseFloat(height) : null,
+        weight: weight ? parseFloat(weight) : null,
+        dob: dob || null,
+        goal: goal || null,
+        calorieGoal: typeof calorieGoal === 'number' ? calorieGoal : null,
+        photoKey: photoKey || null,
       };
-      if (isExistingUser) {
-        await saveProfile(input);
-      } else {
-        // Create requires email
-        const client = await getGraphQLClient();
-        const authMode = await getPreferredAuthMode();
-        try {
-          const attrs = await fetchUserAttributes();
-          (input as any).email = attrs?.email || null;
-        } catch {}
-        const resp: any = await (client as any).graphql({ query: createUserMutation, variables: { input }, ...(authMode ? { authMode } : {}) });
-        if (resp.errors) throw new Error(resp.errors[0]?.message || 'Create failed');
-      }
-      setStatusMsg('Profile updated');
+      await saveLocalProfile(localProfile);
+      setStatusMsg('Profile saved locally');
       setTimeout(() => router.back(), 600);
     } catch (e: any) {
       setErrorMsg(e?.message || 'Failed to save changes');

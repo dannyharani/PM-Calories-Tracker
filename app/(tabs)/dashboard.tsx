@@ -3,9 +3,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 // Avatar uses ThemedText initial; IconSymbol import removed
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { ensureSignedIn } from '@/src/auth';
-import { getUser } from '@/src/graphql/queries';
+import { mealsForDate } from '@/src/local/mealStore';
+import { loadLocalProfile } from '@/src/local/profileStore';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { getCurrentUser } from 'aws-amplify/auth';
@@ -62,16 +62,7 @@ export default function DashboardScreen() {
         }
 
         setUserId(id);
-
-  const client = await getGraphQLClient();
-  const authMode = await getPreferredAuthMode();
-  const result: any = await client.graphql({
-          query: getUser,
-          variables: { id },
-    ...(authMode ? { authMode } : {}),
-        });
-
-  const userProfile = result.data.getUser;
+    const userProfile = await loadLocalProfile();
 
         if (mounted) {
           // Set the name!
@@ -135,29 +126,7 @@ export default function DashboardScreen() {
 
   const fetchMealsForDate = useCallback(async (dateToFetch: Date, id: string) => {
       try {
-        const startOfDay = new Date(dateToFetch.getFullYear(), dateToFetch.getMonth(), dateToFetch.getDate(), 0, 0, 0, 0);
-        const endOfDay = new Date(dateToFetch.getFullYear(), dateToFetch.getMonth(), dateToFetch.getDate(), 23, 59, 59, 999);
-
-        const listMealsForDashboard = /* GraphQL */ `
-          query ListMeals($filter: ModelMealFilterInput) {
-            listMeals(filter: $filter) { items { id mealType calories proteinGrams carbsGrams fatGrams date photoKey } }
-          }
-        `;
-
-  const client = await getGraphQLClient();
-  const authMode2 = await getPreferredAuthMode();
-  const mealsResult: any = await client.graphql({
-          query: listMealsForDashboard,
-          variables: {
-            filter: {
-              userMealsId: { eq: id },
-              date: { between: [startOfDay.toISOString(), endOfDay.toISOString()] },
-            },
-          },
-          ...(authMode2 ? { authMode: authMode2 } : {}),
-        });
-
-        const items = mealsResult?.data?.listMeals?.items || [];
+        const items = await mealsForDate(id, dateToFetch);
         setMealsToday(items);
         const total = items.reduce((s: number, m: any) => s + (m?.calories || 0), 0);
         setTodayCalories(total);

@@ -2,8 +2,8 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { ensureSignedIn } from '@/src/auth';
+import { addMeal } from '@/src/local/mealStore';
 import { Picker } from '@react-native-picker/picker';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { uploadData } from 'aws-amplify/storage';
@@ -14,14 +14,7 @@ import { ActivityIndicator, Button, Image, Platform, StyleSheet, TextInput, View
 import { estimateFromLabels, estimateFromMealType, MealType as EstMealType } from '../../../src/utils/macroEstimator';
 import { getStorageMissingMessage, isStorageConfigured } from '../../../src/utils/storage';
 
-// Client will be loaded lazily when saving
-
-const createMealGql = /* GraphQL */ `
-mutation CreateMeal($input: CreateMealInput!) {
-  createMeal(input: $input) {
-    id
-  }
-}`;
+// Local-first: meals are stored in AsyncStorage; S3 is used only for photos
 
 type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
 
@@ -135,8 +128,9 @@ export default function AddMealScreen() {
         setError(getStorageMissingMessage());
       }
 
-      // Use schema-safe input fields that exist on the deployed API
-      const input: any = {
+      // Save locally
+      const saved = await addMeal({
+        userMealsId: String(userId),
         date: nowIso,
         mealType,
         calories: Math.round(est.calories),
@@ -146,16 +140,8 @@ export default function AddMealScreen() {
         fatGrams: est.fatGrams,
         estimateConfidence: est.estimateConfidence,
         photoKey,
-        userMealsId: userId,
-        // dateTime can be left undefined; backend may ignore
-      };
-
-  const client = await getGraphQLClient();
-  const authMode = await getPreferredAuthMode();
-  const res: any = await client.graphql({ query: createMealGql, variables: { input }, ...(authMode ? { authMode } : {}) });
-      const id = res?.data?.createMeal?.id;
-  if (id) router.replace({ pathname: '/(tabs)/meal/[id]', params: { id } });
-      else router.back();
+      });
+      router.replace({ pathname: '/(tabs)/meal/[id]', params: { id: saved.id } });
     } catch (e: any) {
       setError(e?.message || 'Failed to save meal');
     } finally {
