@@ -1,9 +1,64 @@
-# This "input" configures a global authorization rule to enable public access to
-# all models in this schema. Learn more about authorization rules here: https://docs.amplify.aws/cli/graphql/authorization-rules
-input AMPLIFY { globalAuthRule: AuthRule = { allow: public } } # FOR TESTING ONLY!
+"""
+Calories Tracker domain schema.
 
-type Todo @model {
+Defines User and Meal models with owner-based authorization and a one-to-many
+relation (User has many Meals). A secondary index on Meal (userMealsId + date)
+supports efficient date-range queries per user.
+
+After editing this file run: `amplify push` to deploy changes, then `amplify codegen`.
+"""
+
+enum Goal {
+  LOSE_WEIGHT
+  MAINTAIN_WEIGHT
+  GAIN_WEIGHT
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+type User @model
+@auth(rules: [
+  { allow: owner }
+]) {
   id: ID!
-  name: String!
-  description: String
+  email: AWSEmail!
+  firstName: String
+  lastName: String
+  dob: AWSDate
+  gender: String
+  height: Float
+  weight: Float
+  goal: Goal
+  age: Int
+  goalDate: AWSDate
+  calorieGoal: Int
+  meals: [Meal] @hasMany(indexName: "byUser", fields: ["id"]) # connection via userMealsId
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+}
+
+type Meal @model
+@auth(rules: [
+  { allow: owner }
+])
+@index(name: "byUser", fields: ["userMealsId", "date"], queryField: "mealsByUserAndDate") {
+  id: ID!
+  date: AWSDateTime! # precise timestamp of meal
+  mealType: MealType!
+  calories: Int!
+  estimatedIngredients: [String]
+  proteinGrams: Float
+  carbsGrams: Float
+  fatGrams: Float
+  estimateConfidence: Float
+  photoKey: String
+  userMealsId: ID! # foreign key to User.id
+  user: User @belongsTo(fields: ["userMealsId"]) # owning user
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
 }
