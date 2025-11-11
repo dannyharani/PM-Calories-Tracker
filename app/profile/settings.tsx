@@ -2,6 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
+import { ensureSignedIn } from '@/src/auth';
 import { saveProfile } from '@/src/data/saveProfile';
 import { createUser as createUserMutation } from '@/src/graphql/mutations';
 import { getUser as getUserQuery } from '@/src/graphql/queries';
@@ -28,6 +29,7 @@ function dobToAge(dob?: string | null): number | null {
 export default function ProfileSettings() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [statusMsg, setStatusMsg] = useState<string>('');
@@ -78,35 +80,44 @@ export default function ProfileSettings() {
     }
   }, [weight, height, dob, gender, goal]);
 
+  // Auth gate + profile load
   useEffect(() => {
     let mounted = true;
     (async () => {
+      const signedIn = await ensureSignedIn();
+      if (!mounted) return;
+      if (!signedIn) {
+        setLoading(false);
+        setAuthReady(false);
+        setErrorMsg('Please sign in to view or edit your profile.');
+        return;
+      }
+      setAuthReady(true);
       try {
         const current = await getCurrentUser();
         const id = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
         if (!id) throw new Error('No authenticated user');
         const client = await getGraphQLClient();
-  const authMode = await getPreferredAuthMode();
-  const resp: any = await client.graphql({ query: getUserQuery, variables: { id }, ...(authMode ? { authMode } : {}) });
+        const authMode = await getPreferredAuthMode();
+        const resp: any = await client.graphql({ query: getUserQuery, variables: { id }, ...(authMode ? { authMode } : {}) });
         const u = resp?.data?.getUser;
         if (u && mounted) {
           setIsExistingUser(true);
           setFirstName(u.firstName || '');
           setLastName(u.lastName || '');
           setGender(u.gender || '');
-            setHeight(u.height ? String(u.height) : '');
+          setHeight(u.height ? String(u.height) : '');
           setWeight(u.weight ? String(u.weight) : '');
           setDob(u.dob || '');
           if (u.goal) setGoal(u.goal);
           if (typeof u.calorieGoal === 'number') setCalorieGoal(u.calorieGoal);
+          if (u.photoKey) setPhotoKey(u.photoKey);
         } else if (!u) {
-          // Attempt to prefill from attributes if profile missing
           const attrs = await fetchUserAttributes();
           setFirstName(attrs?.name || '');
           setIsExistingUser(false);
         }
       } catch (e: any) {
-        // If profile load fails (e.g., API temporarily unavailable), fall back to attributes
         try {
           const attrs = await fetchUserAttributes();
           setFirstName(attrs?.name || '');
@@ -114,7 +125,7 @@ export default function ProfileSettings() {
         } catch {}
         setErrorMsg(e?.message || 'Failed to load profile. You can still enter details and save.');
       } finally {
-        mounted && setLoading(false);
+        if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
@@ -203,6 +214,15 @@ export default function ProfileSettings() {
       <ThemedView style={styles.container}> 
         <ThemedText style={styles.title}>Profile Settings</ThemedText>
         <ThemedText>Loading…</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (!authReady) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText style={styles.title}>Profile Settings</ThemedText>
+        <ThemedText>{errorMsg || 'Sign in required.'}</ThemedText>
       </ThemedView>
     );
   }

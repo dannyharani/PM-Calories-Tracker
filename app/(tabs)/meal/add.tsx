@@ -3,6 +3,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
+import { ensureSignedIn } from '@/src/auth';
 import { Picker } from '@react-native-picker/picker';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { uploadData } from 'aws-amplify/storage';
@@ -85,6 +86,8 @@ export default function AddMealScreen() {
     setIsSaving(true);
     setError(null);
     try {
+      const ok = await ensureSignedIn();
+      if (!ok) throw new Error('Not signed in');
       const user = await getCurrentUser();
       const userId = (user as any)?.userId || (user as any)?.username;
       if (!userId) throw new Error('Not signed in');

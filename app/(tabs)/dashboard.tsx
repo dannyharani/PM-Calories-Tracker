@@ -1,8 +1,10 @@
+import { Avatar } from '@/components/avatar';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 // Avatar uses ThemedText initial; IconSymbol import removed
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
+import { ensureSignedIn } from '@/src/auth';
 import { getUser } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -116,14 +118,17 @@ export default function DashboardScreen() {
   }, [router]);
 
   useEffect(() => {
-    fetchUser();
+    (async () => {
+      const ok = await ensureSignedIn();
+      if (ok) fetchUser();
+    })();
     return () => {};
   }, [fetchUser]);
 
   // Refetch when screen gains focus (e.g., returning from settings)
   useFocusEffect(
     useCallback(() => {
-      fetchUser();
+  (async () => { if (await ensureSignedIn()) fetchUser(); })();
       return () => {};
     }, [fetchUser])
   );
@@ -172,9 +177,11 @@ export default function DashboardScreen() {
   // Fetch meals whenever selectedDate or userId changes
   useEffect(() => {
 
-    if (userId) {
-      fetchMealsForDate(selectedDate, userId);
-    }
+    (async () => {
+      if (userId && await ensureSignedIn()) {
+        fetchMealsForDate(selectedDate, userId);
+      }
+    })();
 
     console.log(selectedDate)
   }, [selectedDate, userId, fetchMealsForDate]);
@@ -193,6 +200,7 @@ export default function DashboardScreen() {
     <ThemedView style={styles.container}>
       <View style={styles.headerRow}>
         <ThemedText type="title">Dashboard</ThemedText>
+        <Avatar photoKey={undefined /* replace with user photoKey when loaded */} size={40} />
       </View>
       {/* Date picker to select which day's meals to view */}
       <View style={styles.dateRow}>
@@ -251,10 +259,11 @@ export default function DashboardScreen() {
           {mealsToday && mealsToday.length > 0 ? (
             <View style={{ marginTop: 8 }}>
               {mealsToday.map((m: any) => (
-                <TouchableOpacity key={m.id} onPress={() => router.push({ pathname: '/(tabs)/meal/[id]', params: { id: m.id } })} style={{ paddingVertical: 6 }}>
-                  <ThemedText style={{ fontSize: 14 }}>{`${m.mealType}: ${m.calories} kcal`}</ThemedText>
+                <TouchableOpacity key={m.id} onPress={() => router.push({ pathname: '/(tabs)/meal/[id]', params: { id: m.id } })} style={{ paddingVertical: 8 }}>
+                  <ThemedText style={{ fontSize: 15, fontWeight: '600' }}>{`${m.mealType} • ${new Date(m.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</ThemedText>
+                  <ThemedText style={{ fontSize: 13 }}>{`${m.calories} kcal`}</ThemedText>
                   {typeof m.proteinGrams === 'number' ? (
-                    <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>{`P ${Math.round(m.proteinGrams)}g · C ${Math.round(m.carbsGrams || 0)}g · F ${Math.round(m.fatGrams || 0)}g`}</ThemedText>
+                    <ThemedText style={{ fontSize: 12, opacity: 0.75 }}>{`Protein ${Math.round(m.proteinGrams)}g · Carbs ${Math.round(m.carbsGrams || 0)}g · Fat ${Math.round(m.fatGrams || 0)}g`}</ThemedText>
                   ) : null}
                 </TouchableOpacity>
               ))}

@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
+import { ensureSignedIn } from '@/src/auth';
 // Use storage helpers to get signed URL and metadata
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -43,10 +44,12 @@ export default function MealDetail() {
         }
       }
     `;
-    const load = async () => {
+  const load = async () => {
       if (!id) return;
       setLoading(true);
       try {
+    const ok = await ensureSignedIn();
+    if (!ok) throw new Error('Not signed in');
   const client = await getGraphQLClient();
   const authMode = await getPreferredAuthMode();
   const res: any = await client.graphql({ query: GET_MEAL_DETAIL, variables: { id }, ...(authMode ? { authMode } : {}) });

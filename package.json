@@ -1,5 +1,5 @@
 {
-  "name": "seg4105",
+  "name": "pm-calories-tracker",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
