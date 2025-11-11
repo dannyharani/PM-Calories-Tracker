@@ -1,6 +1,6 @@
 projects:
-  seg4105:
-    schemaPath: amplify/backend/api/seg4105/build/schema.graphql
+  pmcaloriestracker:
+    schemaPath: amplify/backend/api/pmcaloriestracker/build/schema.graphql
     includes:
       - src/graphql/**/*.ts
     excludes:
@@ -14,17 +14,6 @@ projects:
         region: us-east-2
         apiId: null
         maxDepth: 2
-  pmcaloriestracker:
-    schemaPath: src/graphql/schema.json
-    includes:
-      - src/graphql/**/*.ts
-    excludes:
-      - ./amplify/**
-    extensions:
-      amplify:
-        codeGenTarget: typescript
-        generatedFileName: src/API.ts
-        docsFilePath: src/graphql
 extensions:
   amplify:
     version: 3

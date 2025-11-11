@@ -1,11 +1,11 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getGraphQLClient } from '@/src/amplifyClient';
-import { getUrl } from 'aws-amplify/storage';
+import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
+// Use storage helpers to get signed URL and metadata
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Button, Image, StyleSheet, View } from 'react-native';
-import { isStorageConfigured } from '../../../src/utils/storage';
+import { fetchObjectMetadata, getSignedUrl, isStorageConfigured } from '../../../src/utils/storage';
 
 // Client will be loaded lazily on demand
 
@@ -16,6 +16,12 @@ export default function MealDetail() {
   const [meal, setMeal] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoMeta, setPhotoMeta] = useState<{
+    contentType?: string;
+    size?: number;
+    lastModified?: Date;
+    metadata?: Record<string, string>;
+  } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -42,18 +48,22 @@ export default function MealDetail() {
       setLoading(true);
       try {
   const client = await getGraphQLClient();
-  const res: any = await client.graphql({ query: GET_MEAL_DETAIL, variables: { id }, authMode: 'userPool' });
+  const authMode = await getPreferredAuthMode();
+  const res: any = await client.graphql({ query: GET_MEAL_DETAIL, variables: { id }, ...(authMode ? { authMode } : {}) });
         const data = res?.data?.getMeal;
         if (mounted) setMeal(data || null);
         if (mounted && data?.photoKey && isStorageConfigured()) {
           try {
-            const result = await getUrl({ key: data.photoKey, options: { expiresIn: 3600 } });
-            setPhotoUrl(result.url.toString());
+            const url = await getSignedUrl(data.photoKey, 3600);
+            setPhotoUrl(url);
+            const props = await fetchObjectMetadata(data.photoKey);
+            setPhotoMeta(props);
           } catch {
             // ignore URL errors
           }
         } else {
           setPhotoUrl(null);
+          setPhotoMeta(null);
         }
       } catch (err) {
         console.warn('Could not load meal', err);
@@ -128,7 +138,23 @@ export default function MealDetail() {
           </View>
 
           {photoUrl ? (
-            <Image source={{ uri: photoUrl }} style={styles.photo} />
+            <>
+              <Image source={{ uri: photoUrl }} style={styles.photo} />
+              {photoMeta?.metadata ? (
+                <View style={{ marginTop: 8 }}>
+                  <ThemedText style={{ fontWeight: 'bold', marginBottom: 4 }}>Photo metadata</ThemedText>
+                  {photoMeta.metadata.mealType ? (
+                    <ThemedText>Meal type: {photoMeta.metadata.mealType}</ThemedText>
+                  ) : null}
+                  {photoMeta.metadata.date ? (
+                    <ThemedText>Uploaded for date: {String(photoMeta.metadata.date).split('T')[0]}</ThemedText>
+                  ) : null}
+                  {photoMeta.metadata.calories ? (
+                    <ThemedText>Calories: {photoMeta.metadata.calories} kcal</ThemedText>
+                  ) : null}
+                </View>
+              ) : null}
+            </>
           ) : null}
 
           {/* Detailed sections */}

@@ -2,7 +2,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient } from '@/src/amplifyClient';
+import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { Picker } from '@react-native-picker/picker';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { uploadData } from 'aws-amplify/storage';
@@ -71,7 +71,7 @@ export default function AddMealScreen() {
         const est = estimateFromLabels(mealType as EstMealType, parsedLabels);
         setEstimation(est);
       } else {
-        const est = estimateFromMealType(mealType as EstMealType);
+        const est = estimation || estimateFromMealType(mealType as EstMealType);
         setEstimation(est);
       }
     } catch (e: any) {
@@ -132,6 +132,7 @@ export default function AddMealScreen() {
         setError(getStorageMissingMessage());
       }
 
+      // Use schema-safe input fields that exist on the deployed API
       const input: any = {
         date: nowIso,
         mealType,
@@ -141,14 +142,16 @@ export default function AddMealScreen() {
         carbsGrams: est.carbsGrams,
         fatGrams: est.fatGrams,
         estimateConfidence: est.estimateConfidence,
-        userMealsId: userId,
         photoKey,
+        userMealsId: userId,
+        // dateTime can be left undefined; backend may ignore
       };
 
   const client = await getGraphQLClient();
-  const res: any = await client.graphql({ query: createMealGql, variables: { input }, authMode: 'userPool' });
+  const authMode = await getPreferredAuthMode();
+  const res: any = await client.graphql({ query: createMealGql, variables: { input }, ...(authMode ? { authMode } : {}) });
       const id = res?.data?.createMeal?.id;
-  if (id) router.replace({ pathname: '/meal/[id]', params: { id } });
+  if (id) router.replace({ pathname: '/(tabs)/meal/[id]', params: { id } });
       else router.back();
     } catch (e: any) {
       setError(e?.message || 'Failed to save meal');

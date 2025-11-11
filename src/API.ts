@@ -41,7 +41,7 @@ export type ModelUserConditionInput = {
   not?: ModelUserConditionInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
-  id?: ModelStringInput | null,
+  owner?: ModelStringInput | null,
 };
 
 export type ModelStringInput = {
@@ -130,6 +130,7 @@ export type User = {
   meals?: ModelMealConnection | null,
   createdAt: string,
   updatedAt: string,
+  owner?: string | null,
 };
 
 export type ModelMealConnection = {
@@ -145,11 +146,15 @@ export type Meal = {
   mealType: MealType,
   calories: number,
   estimatedIngredients?: Array< string | null > | null,
+  proteinGrams?: number | null,
+  carbsGrams?: number | null,
+  fatGrams?: number | null,
+  estimateConfidence?: number | null,
+  photoKey?: string | null,
   user?: User | null,
-  dateTime?: string | null,
+  userMealsId?: string | null,
   createdAt: string,
   updatedAt: string,
-  userMealsId?: string | null,
   owner?: string | null,
 };
 
@@ -186,7 +191,11 @@ export type CreateMealInput = {
   mealType: MealType,
   calories: number,
   estimatedIngredients?: Array< string | null > | null,
-  dateTime?: string | null,
+  proteinGrams?: number | null,
+  carbsGrams?: number | null,
+  fatGrams?: number | null,
+  estimateConfidence?: number | null,
+  photoKey?: string | null,
   userMealsId?: string | null,
 };
 
@@ -195,13 +204,17 @@ export type ModelMealConditionInput = {
   mealType?: ModelMealTypeInput | null,
   calories?: ModelIntInput | null,
   estimatedIngredients?: ModelStringInput | null,
-  dateTime?: ModelStringInput | null,
+  proteinGrams?: ModelFloatInput | null,
+  carbsGrams?: ModelFloatInput | null,
+  fatGrams?: ModelFloatInput | null,
+  estimateConfidence?: ModelFloatInput | null,
+  photoKey?: ModelStringInput | null,
+  userMealsId?: ModelIDInput | null,
   and?: Array< ModelMealConditionInput | null > | null,
   or?: Array< ModelMealConditionInput | null > | null,
   not?: ModelMealConditionInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
-  userMealsId?: ModelIDInput | null,
   owner?: ModelStringInput | null,
 };
 
@@ -232,7 +245,11 @@ export type UpdateMealInput = {
   mealType?: MealType | null,
   calories?: number | null,
   estimatedIngredients?: Array< string | null > | null,
-  dateTime?: string | null,
+  proteinGrams?: number | null,
+  carbsGrams?: number | null,
+  fatGrams?: number | null,
+  estimateConfidence?: number | null,
+  photoKey?: string | null,
   userMealsId?: string | null,
 };
 
@@ -258,6 +275,7 @@ export type ModelUserFilterInput = {
   and?: Array< ModelUserFilterInput | null > | null,
   or?: Array< ModelUserFilterInput | null > | null,
   not?: ModelUserFilterInput | null,
+  owner?: ModelStringInput | null,
 };
 
 export type ModelUserConnection = {
@@ -272,17 +290,22 @@ export type ModelMealFilterInput = {
   mealType?: ModelMealTypeInput | null,
   calories?: ModelIntInput | null,
   estimatedIngredients?: ModelStringInput | null,
-  dateTime?: ModelStringInput | null,
+  proteinGrams?: ModelFloatInput | null,
+  carbsGrams?: ModelFloatInput | null,
+  fatGrams?: ModelFloatInput | null,
+  estimateConfidence?: ModelFloatInput | null,
+  photoKey?: ModelStringInput | null,
+  userMealsId?: ModelIDInput | null,
   createdAt?: ModelStringInput | null,
   updatedAt?: ModelStringInput | null,
   and?: Array< ModelMealFilterInput | null > | null,
   or?: Array< ModelMealFilterInput | null > | null,
   not?: ModelMealFilterInput | null,
-  userMealsId?: ModelIDInput | null,
   owner?: ModelStringInput | null,
 };
 
 export type ModelSubscriptionUserFilterInput = {
+  id?: ModelSubscriptionIDInput | null,
   email?: ModelSubscriptionStringInput | null,
   firstName?: ModelSubscriptionStringInput | null,
   lastName?: ModelSubscriptionStringInput | null,
@@ -298,8 +321,22 @@ export type ModelSubscriptionUserFilterInput = {
   updatedAt?: ModelSubscriptionStringInput | null,
   and?: Array< ModelSubscriptionUserFilterInput | null > | null,
   or?: Array< ModelSubscriptionUserFilterInput | null > | null,
-  userMealsId?: ModelSubscriptionIDInput | null,
-  id?: ModelStringInput | null,
+  owner?: ModelStringInput | null,
+};
+
+export type ModelSubscriptionIDInput = {
+  ne?: string | null,
+  eq?: string | null,
+  le?: string | null,
+  lt?: string | null,
+  ge?: string | null,
+  gt?: string | null,
+  contains?: string | null,
+  notContains?: string | null,
+  between?: Array< string | null > | null,
+  beginsWith?: string | null,
+  in?: Array< string | null > | null,
+  notIn?: Array< string | null > | null,
 };
 
 export type ModelSubscriptionStringInput = {
@@ -341,28 +378,18 @@ export type ModelSubscriptionIntInput = {
   notIn?: Array< number | null > | null,
 };
 
-export type ModelSubscriptionIDInput = {
-  ne?: string | null,
-  eq?: string | null,
-  le?: string | null,
-  lt?: string | null,
-  ge?: string | null,
-  gt?: string | null,
-  contains?: string | null,
-  notContains?: string | null,
-  between?: Array< string | null > | null,
-  beginsWith?: string | null,
-  in?: Array< string | null > | null,
-  notIn?: Array< string | null > | null,
-};
-
 export type ModelSubscriptionMealFilterInput = {
   id?: ModelSubscriptionIDInput | null,
   date?: ModelSubscriptionStringInput | null,
   mealType?: ModelSubscriptionStringInput | null,
   calories?: ModelSubscriptionIntInput | null,
   estimatedIngredients?: ModelSubscriptionStringInput | null,
-  dateTime?: ModelSubscriptionStringInput | null,
+  proteinGrams?: ModelSubscriptionFloatInput | null,
+  carbsGrams?: ModelSubscriptionFloatInput | null,
+  fatGrams?: ModelSubscriptionFloatInput | null,
+  estimateConfidence?: ModelSubscriptionFloatInput | null,
+  photoKey?: ModelSubscriptionStringInput | null,
+  userMealsId?: ModelSubscriptionIDInput | null,
   createdAt?: ModelSubscriptionStringInput | null,
   updatedAt?: ModelSubscriptionStringInput | null,
   and?: Array< ModelSubscriptionMealFilterInput | null > | null,
@@ -396,6 +423,7 @@ export type CreateUserMutation = {
     } | null,
     createdAt: string,
     updatedAt: string,
+    owner?: string | null,
   } | null,
 };
 
@@ -425,6 +453,7 @@ export type UpdateUserMutation = {
     } | null,
     createdAt: string,
     updatedAt: string,
+    owner?: string | null,
   } | null,
 };
 
@@ -454,6 +483,7 @@ export type DeleteUserMutation = {
     } | null,
     createdAt: string,
     updatedAt: string,
+    owner?: string | null,
   } | null,
 };
 
@@ -470,6 +500,11 @@ export type CreateMealMutation = {
     mealType: MealType,
     calories: number,
     estimatedIngredients?: Array< string | null > | null,
+    proteinGrams?: number | null,
+    carbsGrams?: number | null,
+    fatGrams?: number | null,
+    estimateConfidence?: number | null,
+    photoKey?: string | null,
     user?:  {
       __typename: "User",
       id: string,
@@ -486,11 +521,11 @@ export type CreateMealMutation = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null,
-    dateTime?: string | null,
+    userMealsId?: string | null,
     createdAt: string,
     updatedAt: string,
-    userMealsId?: string | null,
     owner?: string | null,
   } | null,
 };
@@ -508,6 +543,11 @@ export type UpdateMealMutation = {
     mealType: MealType,
     calories: number,
     estimatedIngredients?: Array< string | null > | null,
+    proteinGrams?: number | null,
+    carbsGrams?: number | null,
+    fatGrams?: number | null,
+    estimateConfidence?: number | null,
+    photoKey?: string | null,
     user?:  {
       __typename: "User",
       id: string,
@@ -524,11 +564,11 @@ export type UpdateMealMutation = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null,
-    dateTime?: string | null,
+    userMealsId?: string | null,
     createdAt: string,
     updatedAt: string,
-    userMealsId?: string | null,
     owner?: string | null,
   } | null,
 };
@@ -546,6 +586,11 @@ export type DeleteMealMutation = {
     mealType: MealType,
     calories: number,
     estimatedIngredients?: Array< string | null > | null,
+    proteinGrams?: number | null,
+    carbsGrams?: number | null,
+    fatGrams?: number | null,
+    estimateConfidence?: number | null,
+    photoKey?: string | null,
     user?:  {
       __typename: "User",
       id: string,
@@ -562,11 +607,11 @@ export type DeleteMealMutation = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null,
-    dateTime?: string | null,
+    userMealsId?: string | null,
     createdAt: string,
     updatedAt: string,
-    userMealsId?: string | null,
     owner?: string | null,
   } | null,
 };
@@ -596,6 +641,7 @@ export type GetUserQuery = {
     } | null,
     createdAt: string,
     updatedAt: string,
+    owner?: string | null,
   } | null,
 };
 
@@ -624,6 +670,7 @@ export type ListUsersQuery = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null >,
     nextToken?: string | null,
   } | null,
@@ -641,6 +688,11 @@ export type GetMealQuery = {
     mealType: MealType,
     calories: number,
     estimatedIngredients?: Array< string | null > | null,
+    proteinGrams?: number | null,
+    carbsGrams?: number | null,
+    fatGrams?: number | null,
+    estimateConfidence?: number | null,
+    photoKey?: string | null,
     user?:  {
       __typename: "User",
       id: string,
@@ -657,11 +709,11 @@ export type GetMealQuery = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null,
-    dateTime?: string | null,
+    userMealsId?: string | null,
     createdAt: string,
     updatedAt: string,
-    userMealsId?: string | null,
     owner?: string | null,
   } | null,
 };
@@ -682,10 +734,14 @@ export type ListMealsQuery = {
       mealType: MealType,
       calories: number,
       estimatedIngredients?: Array< string | null > | null,
-      dateTime?: string | null,
+      proteinGrams?: number | null,
+      carbsGrams?: number | null,
+      fatGrams?: number | null,
+      estimateConfidence?: number | null,
+      photoKey?: string | null,
+      userMealsId?: string | null,
       createdAt: string,
       updatedAt: string,
-      userMealsId?: string | null,
       owner?: string | null,
     } | null >,
     nextToken?: string | null,
@@ -694,7 +750,7 @@ export type ListMealsQuery = {
 
 export type OnCreateUserSubscriptionVariables = {
   filter?: ModelSubscriptionUserFilterInput | null,
-  id?: string | null,
+  owner?: string | null,
 };
 
 export type OnCreateUserSubscription = {
@@ -718,12 +774,13 @@ export type OnCreateUserSubscription = {
     } | null,
     createdAt: string,
     updatedAt: string,
+    owner?: string | null,
   } | null,
 };
 
 export type OnUpdateUserSubscriptionVariables = {
   filter?: ModelSubscriptionUserFilterInput | null,
-  id?: string | null,
+  owner?: string | null,
 };
 
 export type OnUpdateUserSubscription = {
@@ -747,12 +804,13 @@ export type OnUpdateUserSubscription = {
     } | null,
     createdAt: string,
     updatedAt: string,
+    owner?: string | null,
   } | null,
 };
 
 export type OnDeleteUserSubscriptionVariables = {
   filter?: ModelSubscriptionUserFilterInput | null,
-  id?: string | null,
+  owner?: string | null,
 };
 
 export type OnDeleteUserSubscription = {
@@ -776,6 +834,7 @@ export type OnDeleteUserSubscription = {
     } | null,
     createdAt: string,
     updatedAt: string,
+    owner?: string | null,
   } | null,
 };
 
@@ -792,6 +851,11 @@ export type OnCreateMealSubscription = {
     mealType: MealType,
     calories: number,
     estimatedIngredients?: Array< string | null > | null,
+    proteinGrams?: number | null,
+    carbsGrams?: number | null,
+    fatGrams?: number | null,
+    estimateConfidence?: number | null,
+    photoKey?: string | null,
     user?:  {
       __typename: "User",
       id: string,
@@ -808,11 +872,11 @@ export type OnCreateMealSubscription = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null,
-    dateTime?: string | null,
+    userMealsId?: string | null,
     createdAt: string,
     updatedAt: string,
-    userMealsId?: string | null,
     owner?: string | null,
   } | null,
 };
@@ -830,6 +894,11 @@ export type OnUpdateMealSubscription = {
     mealType: MealType,
     calories: number,
     estimatedIngredients?: Array< string | null > | null,
+    proteinGrams?: number | null,
+    carbsGrams?: number | null,
+    fatGrams?: number | null,
+    estimateConfidence?: number | null,
+    photoKey?: string | null,
     user?:  {
       __typename: "User",
       id: string,
@@ -846,11 +915,11 @@ export type OnUpdateMealSubscription = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null,
-    dateTime?: string | null,
+    userMealsId?: string | null,
     createdAt: string,
     updatedAt: string,
-    userMealsId?: string | null,
     owner?: string | null,
   } | null,
 };
@@ -868,6 +937,11 @@ export type OnDeleteMealSubscription = {
     mealType: MealType,
     calories: number,
     estimatedIngredients?: Array< string | null > | null,
+    proteinGrams?: number | null,
+    carbsGrams?: number | null,
+    fatGrams?: number | null,
+    estimateConfidence?: number | null,
+    photoKey?: string | null,
     user?:  {
       __typename: "User",
       id: string,
@@ -884,11 +958,11 @@ export type OnDeleteMealSubscription = {
       calorieGoal?: number | null,
       createdAt: string,
       updatedAt: string,
+      owner?: string | null,
     } | null,
-    dateTime?: string | null,
+    userMealsId?: string | null,
     createdAt: string,
     updatedAt: string,
-    userMealsId?: string | null,
     owner?: string | null,
   } | null,
 };

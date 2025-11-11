@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient } from '@/src/amplifyClient';
+import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { createUser as createUserMutation, updateUser as updateUserMutation } from '@/src/graphql/mutations';
 import { getUser as getUserQuery } from '@/src/graphql/queries';
 import { fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
@@ -81,7 +81,8 @@ export default function ProfileSettings() {
         const id = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
         if (!id) throw new Error('No authenticated user');
         const client = await getGraphQLClient();
-        const resp: any = await client.graphql({ query: getUserQuery, variables: { id }, authMode: 'userPool' });
+  const authMode = await getPreferredAuthMode();
+  const resp: any = await client.graphql({ query: getUserQuery, variables: { id }, ...(authMode ? { authMode } : {}) });
         const u = resp?.data?.getUser;
         if (u && mounted) {
           setIsExistingUser(true);
@@ -100,7 +101,13 @@ export default function ProfileSettings() {
           setIsExistingUser(false);
         }
       } catch (e: any) {
-        setErrorMsg(e?.message || 'Failed to load profile.');
+        // If profile load fails (e.g., API temporarily unavailable), fall back to attributes
+        try {
+          const attrs = await fetchUserAttributes();
+          setFirstName(attrs?.name || '');
+          setIsExistingUser(false);
+        } catch {}
+        setErrorMsg(e?.message || 'Failed to load profile. You can still enter details and save.');
       } finally {
         mounted && setLoading(false);
       }
@@ -128,7 +135,8 @@ export default function ProfileSettings() {
         goal: goal || null,
         calorieGoal: calorieGoal || null,
       };
-      const client = await getGraphQLClient();
+  const client = await getGraphQLClient();
+  const authMode = await getPreferredAuthMode();
       const mutationToUse = isExistingUser ? updateUserMutation : createUserMutation;
       // include email on create to satisfy schema
       if (!isExistingUser) {
@@ -137,7 +145,7 @@ export default function ProfileSettings() {
           (input as any).email = attrs?.email || null;
         } catch {}
       }
-      const resp: any = await client.graphql({ query: mutationToUse, variables: { input }, authMode: 'userPool' });
+  const resp: any = await client.graphql({ query: mutationToUse, variables: { input }, ...(authMode ? { authMode } : {}) });
       if (resp.errors) throw new Error(resp.errors[0]?.message || 'Update failed');
       setStatusMsg('Profile updated');
       // Give quick feedback then navigate back

@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient } from '@/src/amplifyClient';
+import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { createUser, updateUser } from '@/src/graphql/mutations';
 import { getUser as getUserQuery } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -53,7 +53,8 @@ const UserInfo = () => {
         if (!id) return;
         setUserId(id);
         const client = await getGraphQLClient();
-        const existingResp: any = await client.graphql({ query: getUserQuery, variables: { id }, authMode: 'userPool' });
+  const authMode = await getPreferredAuthMode();
+  const existingResp: any = await client.graphql({ query: getUserQuery, variables: { id }, ...(authMode ? { authMode } : {}) });
         const existing = existingResp?.data?.getUser;
         if (existing && mounted) {
           setIsExistingUser(true);
@@ -127,14 +128,41 @@ const UserInfo = () => {
 
       const queryToUse = isExistingUser ? updateUser : createUser;
   const client = await getGraphQLClient();
-  const resp = await client.graphql({query: queryToUse, variables: {input}, authMode: 'userPool'})
+  const authMode = await getPreferredAuthMode();
+      const resp: any = await client.graphql({query: queryToUse, variables: {input}, ...(authMode ? { authMode } : {})})
 
-      if (resp.errors) throw new Error(resp.errors[0]?.message || 'GraphQL error');
+      if (resp.errors && resp.errors.length) {
+        const primary = resp.errors[0];
+        // Provide more context for common backend mismatch issues
+        let msg = primary?.message || 'GraphQL error';
+        if (/Unknown type/i.test(msg) || /Validation error/i.test(msg)) {
+          msg += '\nBackend schema likely not deployed. Run: amplify update api -> set default auth to Cognito (keep API key additional) then amplify push, followed by amplify codegen.';
+        } else if (/not authorized/i.test(msg)) {
+          msg += '\nAuthorization failed. Ensure API has Cognito User Pool as additional auth or set default auth appropriately.';
+        }
+        throw new Error(msg);
+      }
+      if (!resp?.data?.[isExistingUser ? 'updateUser' : 'createUser']) {
+        throw new Error('No user returned from mutation. Verify API schema and auth configuration.');
+      }
 
   router.replace('/(tabs)/dashboard');
     } catch (err: any) {
-      console.error('Error saving user info', err);
+      console.error('Error saving user info (detailed)', err);
       setErrorMsg(err?.message || 'Failed to save user info');
+      // Attempt lightweight diagnostics: try a trivial query to see if schema responds
+      try {
+        const client = await getGraphQLClient();
+        const authMode = await getPreferredAuthMode();
+        const probe: any = await client.graphql({ query: /* GraphQL */ `query ProbeUsers { listUsers(limit:1){ items { id } } }`, ...(authMode ? { authMode } : {}) });
+        if (probe?.errors?.length) {
+          console.warn('Probe users errors:', probe.errors);
+        } else {
+          console.log('Probe users success (count):', probe?.data?.listUsers?.items?.length);
+        }
+      } catch (probeErr) {
+        console.warn('Probe query failed; backend may be misconfigured.', probeErr);
+      }
     } finally {
       setSaving(false);
     }

@@ -10,9 +10,9 @@ type GeneratedSubscription<InputType, OutputType> = string & {
 
 export const onCreateUser = /* GraphQL */ `subscription OnCreateUser(
   $filter: ModelSubscriptionUserFilterInput
-  $id: String
+  $owner: String
 ) {
-  onCreateUser(filter: $filter, id: $id) {
+  onCreateUser(filter: $filter, owner: $owner) {
     id
     email
     firstName
@@ -31,6 +31,7 @@ export const onCreateUser = /* GraphQL */ `subscription OnCreateUser(
     }
     createdAt
     updatedAt
+    owner
     __typename
   }
 }
@@ -40,9 +41,9 @@ export const onCreateUser = /* GraphQL */ `subscription OnCreateUser(
 >;
 export const onUpdateUser = /* GraphQL */ `subscription OnUpdateUser(
   $filter: ModelSubscriptionUserFilterInput
-  $id: String
+  $owner: String
 ) {
-  onUpdateUser(filter: $filter, id: $id) {
+  onUpdateUser(filter: $filter, owner: $owner) {
     id
     email
     firstName
@@ -61,6 +62,7 @@ export const onUpdateUser = /* GraphQL */ `subscription OnUpdateUser(
     }
     createdAt
     updatedAt
+    owner
     __typename
   }
 }
@@ -70,9 +72,9 @@ export const onUpdateUser = /* GraphQL */ `subscription OnUpdateUser(
 >;
 export const onDeleteUser = /* GraphQL */ `subscription OnDeleteUser(
   $filter: ModelSubscriptionUserFilterInput
-  $id: String
+  $owner: String
 ) {
-  onDeleteUser(filter: $filter, id: $id) {
+  onDeleteUser(filter: $filter, owner: $owner) {
     id
     email
     firstName
@@ -91,6 +93,7 @@ export const onDeleteUser = /* GraphQL */ `subscription OnDeleteUser(
     }
     createdAt
     updatedAt
+    owner
     __typename
   }
 }
@@ -108,6 +111,11 @@ export const onCreateMeal = /* GraphQL */ `subscription OnCreateMeal(
     mealType
     calories
     estimatedIngredients
+    proteinGrams
+    carbsGrams
+    fatGrams
+    estimateConfidence
+    photoKey
     user {
       id
       email
@@ -123,12 +131,12 @@ export const onCreateMeal = /* GraphQL */ `subscription OnCreateMeal(
       calorieGoal
       createdAt
       updatedAt
+      owner
       __typename
     }
-    dateTime
+    userMealsId
     createdAt
     updatedAt
-    userMealsId
     owner
     __typename
   }
@@ -147,6 +155,11 @@ export const onUpdateMeal = /* GraphQL */ `subscription OnUpdateMeal(
     mealType
     calories
     estimatedIngredients
+    proteinGrams
+    carbsGrams
+    fatGrams
+    estimateConfidence
+    photoKey
     user {
       id
       email
@@ -162,12 +175,12 @@ export const onUpdateMeal = /* GraphQL */ `subscription OnUpdateMeal(
       calorieGoal
       createdAt
       updatedAt
+      owner
       __typename
     }
-    dateTime
+    userMealsId
     createdAt
     updatedAt
-    userMealsId
     owner
     __typename
   }
@@ -186,6 +199,11 @@ export const onDeleteMeal = /* GraphQL */ `subscription OnDeleteMeal(
     mealType
     calories
     estimatedIngredients
+    proteinGrams
+    carbsGrams
+    fatGrams
+    estimateConfidence
+    photoKey
     user {
       id
       email
@@ -201,12 +219,12 @@ export const onDeleteMeal = /* GraphQL */ `subscription OnDeleteMeal(
       calorieGoal
       createdAt
       updatedAt
+      owner
       __typename
     }
-    dateTime
+    userMealsId
     createdAt
     updatedAt
-    userMealsId
     owner
     __typename
   }

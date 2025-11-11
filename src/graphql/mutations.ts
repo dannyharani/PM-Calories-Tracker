@@ -31,6 +31,7 @@ export const createUser = /* GraphQL */ `mutation CreateUser(
     }
     createdAt
     updatedAt
+    owner
     __typename
   }
 }
@@ -61,6 +62,7 @@ export const updateUser = /* GraphQL */ `mutation UpdateUser(
     }
     createdAt
     updatedAt
+    owner
     __typename
   }
 }
@@ -91,6 +93,7 @@ export const deleteUser = /* GraphQL */ `mutation DeleteUser(
     }
     createdAt
     updatedAt
+    owner
     __typename
   }
 }
@@ -108,6 +111,11 @@ export const createMeal = /* GraphQL */ `mutation CreateMeal(
     mealType
     calories
     estimatedIngredients
+    proteinGrams
+    carbsGrams
+    fatGrams
+    estimateConfidence
+    photoKey
     user {
       id
       email
@@ -123,12 +131,12 @@ export const createMeal = /* GraphQL */ `mutation CreateMeal(
       calorieGoal
       createdAt
       updatedAt
+      owner
       __typename
     }
-    dateTime
+    userMealsId
     createdAt
     updatedAt
-    userMealsId
     owner
     __typename
   }
@@ -147,6 +155,11 @@ export const updateMeal = /* GraphQL */ `mutation UpdateMeal(
     mealType
     calories
     estimatedIngredients
+    proteinGrams
+    carbsGrams
+    fatGrams
+    estimateConfidence
+    photoKey
     user {
       id
       email
@@ -162,12 +175,12 @@ export const updateMeal = /* GraphQL */ `mutation UpdateMeal(
       calorieGoal
       createdAt
       updatedAt
+      owner
       __typename
     }
-    dateTime
+    userMealsId
     createdAt
     updatedAt
-    userMealsId
     owner
     __typename
   }
@@ -186,6 +199,11 @@ export const deleteMeal = /* GraphQL */ `mutation DeleteMeal(
     mealType
     calories
     estimatedIngredients
+    proteinGrams
+    carbsGrams
+    fatGrams
+    estimateConfidence
+    photoKey
     user {
       id
       email
@@ -201,12 +219,12 @@ export const deleteMeal = /* GraphQL */ `mutation DeleteMeal(
       calorieGoal
       createdAt
       updatedAt
+      owner
       __typename
     }
-    dateTime
+    userMealsId
     createdAt
     updatedAt
-    userMealsId
     owner
     __typename
   }

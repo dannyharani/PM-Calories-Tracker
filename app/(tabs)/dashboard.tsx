@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 // Avatar uses ThemedText initial; IconSymbol import removed
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient } from '@/src/amplifyClient';
+import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { getUser } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
@@ -62,10 +62,11 @@ export default function DashboardScreen() {
         setUserId(id);
 
   const client = await getGraphQLClient();
+  const authMode = await getPreferredAuthMode();
   const result: any = await client.graphql({
           query: getUser,
           variables: { id },
-          authMode: 'userPool'
+    ...(authMode ? { authMode } : {}),
         });
 
   const userProfile = result.data.getUser;
@@ -108,7 +109,7 @@ export default function DashboardScreen() {
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
-        router.replace('/auth/sign-in');
+        // Do not redirect on data fetch errors; only redirect when not authenticated.
       }
     // mark unmounted
     mounted = false;
@@ -139,6 +140,7 @@ export default function DashboardScreen() {
         `;
 
   const client = await getGraphQLClient();
+  const authMode2 = await getPreferredAuthMode();
   const mealsResult: any = await client.graphql({
           query: listMealsForDashboard,
           variables: {
@@ -147,7 +149,7 @@ export default function DashboardScreen() {
               date: { between: [startOfDay.toISOString(), endOfDay.toISOString()] },
             },
           },
-          authMode: 'userPool',
+          ...(authMode2 ? { authMode: authMode2 } : {}),
         });
 
         const items = mealsResult?.data?.listMeals?.items || [];

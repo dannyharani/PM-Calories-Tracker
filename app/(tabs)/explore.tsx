@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient } from '@/src/amplifyClient';
+import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { deleteUser as deleteUserMutation } from '@/src/graphql/mutations';
 import { getUser as getUserQuery } from '@/src/graphql/queries';
 import { deleteUser as deleteUserAuth, getCurrentUser, signOut } from 'aws-amplify/auth';
@@ -32,7 +32,8 @@ export default function ProfileTab() {
         const cognito: any = await getCurrentUser();
         const id = cognito?.userId || cognito?.attributes?.sub || cognito?.username;
         const client = await getGraphQLClient();
-        const res: any = await client.graphql({ query: getUserQuery, variables: { id }, authMode: 'userPool' });
+  const authMode = await getPreferredAuthMode();
+  const res: any = await client.graphql({ query: getUserQuery, variables: { id }, ...(authMode ? { authMode } : {}) });
         const u = res?.data?.getUser;
         if (mounted) {
           setFirstName(u?.firstName || cognito?.username || null);

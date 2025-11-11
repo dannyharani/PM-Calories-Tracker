@@ -18,8 +18,8 @@ const SignIn = () => {
     let mounted = true;
     const check = async () => {
       try {
-        await getCurrentUser();
-        if (mounted) router.replace('/(tabs)/dashboard');
+        const user = await getCurrentUser();
+        if (mounted && user) router.replace('/(tabs)/dashboard');
       } catch {
         // remain on sign-in
       } finally {

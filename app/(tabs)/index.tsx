@@ -41,11 +41,11 @@ export default function HomeScreen() {
           </>
         ) : (
           <View style={styles.buttonWrapper}>
-            <Button title="Go to Dashboard" onPress={() => router.push('/dashboard')} />
+            <Button title="Go to Dashboard" onPress={() => router.push('/(tabs)/dashboard')} />
           </View>
         )}
         <View style={styles.buttonWrapper}>
-          <Button title="Continue as Guest" onPress={() => router.push('/explore')} />
+          <Button title="Continue as Guest" onPress={() => router.push('/(tabs)/explore')} />
         </View>
       </View>
     </ThemedView>

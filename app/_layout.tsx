@@ -10,7 +10,12 @@ import { AuthProvider } from '../src/context/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 // Configure Amplify with generated exports; React Native polyfills imported above
-Amplify.configure(awsconfig);
+// Force GraphQL default auth to Cognito User Pools at runtime to match backend @auth(owner) rules.
+// This safeguards against stale aws-exports defaulting to API_KEY which causes 401s for owner-protected models.
+Amplify.configure({
+  ...(awsconfig as any),
+  aws_appsync_authenticationType: 'AMAZON_COGNITO_USER_POOLS',
+} as any);
 
 export const unstable_settings = {
   anchor: '(tabs)',

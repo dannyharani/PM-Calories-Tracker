@@ -28,7 +28,7 @@ const ConfirmEmail = () => {
             await signIn({ username: email, password });
             router.replace('/auth/user-info');
             return;
-          } catch (err: any) {
+          } catch {
             // If auto sign-in fails, fall back to the sign-in screen
             Alert.alert('Signed up', 'Confirmation succeeded but automatic sign-in failed. Please sign in manually.');
             router.replace('/auth/sign-in');
