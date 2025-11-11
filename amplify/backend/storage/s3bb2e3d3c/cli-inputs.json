@@ -1,0 +1,14 @@
+{
+  "resourceName": "s3bb2e3d3c",
+  "policyUUID": "bb2e3d3c",
+  "bucketName": "pmcaloriestracker12304720fdee42d295b96a50696da5",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "triggerFunction": "S3Trigger45b2c0a0",
+  "groupAccess": {}
+}

@@ -1,22 +1,31 @@
 {
   "dev": {
     "awscloudformation": {
-      "AuthRoleName": "amplify-seg4105-dev-2d293-authRole",
-      "UnauthRoleArn": "arn:aws:iam::183408705672:role/amplify-seg4105-dev-2d293-unauthRole",
-      "AuthRoleArn": "arn:aws:iam::183408705672:role/amplify-seg4105-dev-2d293-authRole",
+      "AuthRoleName": "amplify-pmcaloriestracker-dev-76192-authRole",
+      "UnauthRoleArn": "arn:aws:iam::101764085240:role/amplify-pmcaloriestracker-dev-76192-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::101764085240:role/amplify-pmcaloriestracker-dev-76192-authRole",
       "Region": "us-east-2",
-      "DeploymentBucketName": "amplify-seg4105-dev-2d293-deployment",
-      "UnauthRoleName": "amplify-seg4105-dev-2d293-unauthRole",
-      "StackName": "amplify-seg4105-dev-2d293",
-      "StackId": "arn:aws:cloudformation:us-east-2:183408705672:stack/amplify-seg4105-dev-2d293/e17f7a20-b4df-11f0-bd59-0aeabaea68b3",
-      "AmplifyAppId": "d3fgcqj4g3at3w"
+      "DeploymentBucketName": "amplify-pmcaloriestracker-dev-76192-deployment",
+      "UnauthRoleName": "amplify-pmcaloriestracker-dev-76192-unauthRole",
+      "StackName": "amplify-pmcaloriestracker-dev-76192",
+      "StackId": "arn:aws:cloudformation:us-east-2:101764085240:stack/amplify-pmcaloriestracker-dev-76192/4839efd0-bf2f-11f0-aa8a-06ebdc1eb5c9",
+      "AmplifyAppId": "d1sxjv4wvji42x"
     },
     "categories": {
       "auth": {
-        "seg4105d5970435": {}
+        "pmcaloriestrackere66ef41c": {}
+      },
+      "function": {
+        "S3Trigger45b2c0a0": {
+          "deploymentBucketName": "amplify-pmcaloriestracker-dev-76192-deployment",
+          "s3Key": "amplify-builds/S3Trigger45b2c0a0-2b35334e2f7258495877-build.zip"
+        }
       },
       "api": {
-        "seg4105": {}
+        "pmcaloriestracker": {}
+      },
+      "storage": {
+        "s3bb2e3d3c": {}
       }
     }
   }
