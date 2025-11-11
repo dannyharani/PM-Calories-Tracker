@@ -3,130 +3,104 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient } from '@/src/amplifyClient';
-import { createMeal as createMealMutation } from '@/src/graphql/mutations';
-import { getCurrentUser } from 'aws-amplify/auth';
-import { Image } from 'expo-image';
+import { deleteUser as deleteUserMutation } from '@/src/graphql/mutations';
+import { getUser as getUserQuery } from '@/src/graphql/queries';
+import { deleteUser as deleteUserAuth, getCurrentUser, signOut } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Button, Platform, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Button, StyleSheet, View } from 'react-native';
+import { showAlert, showConfirm } from '../../src/utils/alert';
 
 // Client will be loaded when saving
 
-export default function ExploreTab() {
-  const [filePreview, setFilePreview] = useState<string | null>(null);
-  const [mealType, setMealType] = useState<string>('LUNCH');
-  const [calories, setCalories] = useState<string>('450');
-  const [ingredients, setIngredients] = useState<string>('rice, chicken, veggies');
-  const [date, setDate] = useState<string>(new Date().toISOString());
-  const [time, setTime] = useState<string>(new Date().toTimeString().slice(0,5));
-  const [estimating, setEstimating] = useState(false);
-  const [saving, setSaving] = useState(false);
+export default function ProfileTab() {
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
+  const [goal, setGoal] = useState<string | null>(null);
+  const [calorieGoal, setCalorieGoal] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const router = useRouter();
-  const textColor = useThemeColor({}, 'text');
-  const bgColor = useThemeColor({}, 'background');
-  const borderColor = useThemeColor({}, 'icon');
+  // colors, in case we add more UI later
+  // const textColor = useThemeColor({}, 'text');
+  // const borderColor = useThemeColor({}, 'icon');
   const iconColor = useThemeColor({}, 'icon');
-
-  const handleFileChange = (e: any) => {
-    const file = e?.target?.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setFilePreview(url);
-  };
-
-  const runEstimate = async () => {
-    setEstimating(true);
-    await new Promise((r) => setTimeout(r, 700));
-    const hour = parseInt(time.split(':')[0], 10) || 12;
-    const sampledType = hour < 10 ? 'BREAKFAST' : hour < 16 ? 'LUNCH' : 'DINNER';
-    setMealType(sampledType);
-    const sampleCalories = sampledType === 'BREAKFAST' ? 350 : sampledType === 'LUNCH' ? 600 : 700;
-    setCalories(String(sampleCalories));
-    setIngredients(['ingredient1', 'ingredient2', 'ingredient3'].join(', '));
-    setEstimating(false);
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const user: any = await getCurrentUser();
-      const userId = user?.userId || user?.attributes?.sub || user?.username;
-      
-      let datePart = date;
-      if (date.includes("T")) {
-         datePart = date.split('T')[0];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const cognito: any = await getCurrentUser();
+        const id = cognito?.userId || cognito?.attributes?.sub || cognito?.username;
+        const client = await getGraphQLClient();
+        const res: any = await client.graphql({ query: getUserQuery, variables: { id }, authMode: 'userPool' });
+        const u = res?.data?.getUser;
+        if (mounted) {
+          setFirstName(u?.firstName || cognito?.username || null);
+          setEmail(u?.email || cognito?.attributes?.email || null);
+          setGoal(u?.goal || null);
+          setCalorieGoal(typeof u?.calorieGoal === 'number' ? u.calorieGoal : null);
+        }
+      } catch {
+        // noop
+      } finally {
+        mounted && setLoading(false);
       }
-      const localDateTimeString = `${datePart}T${time}`;
-      const combinedDate = new Date(localDateTimeString);
-      const finalISOTimestamp = combinedDate.toISOString();
+    })();
+    return () => { mounted = false; };
+  }, []);
 
-      console.log(finalISOTimestamp)
-
-      const input: any = {
-        date: finalISOTimestamp,
-        mealType,
-        calories: parseInt(calories, 10) || 0,
-        estimatedIngredients: ingredients.split(',').map((s) => s.trim()),
-        userMealsId: userId,
-      };
-
-  const client = await getGraphQLClient();
-  await client.graphql({ query: createMealMutation, variables: { input }, authMode: 'userPool' });
-  // go back to dashboard after saving
-  router.replace('/(tabs)/dashboard');
-    } catch (err) {
-      console.warn('Could not save meal', err);
+  const handleSignOut = async () => {
+    setBusy(true);
+    try {
+      await signOut();
+      router.replace('/auth/sign-in');
+    } catch (e: any) {
+      await showAlert('Error', e?.message || 'Failed to sign out');
     } finally {
-      setSaving(false);
+      setBusy(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = await showConfirm('Delete account', 'This will permanently delete your account. Are you sure?');
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      const { userId } = await getCurrentUser();
+      const client = await getGraphQLClient();
+      await client.graphql({ query: deleteUserMutation, variables: { input: { id: userId } }, authMode: 'userPool' });
+      await deleteUserAuth();
+      await showAlert('Account deleted', 'Your account has been deleted.');
+      router.replace('/auth/sign-up');
+    } catch (e: any) {
+      await showAlert('Error', e?.message || 'Failed to delete account');
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
     <ThemedView style={styles.container}>
-      <IconSymbol name="camera" size={120} color={iconColor as string} style={{ marginBottom: 12 }} />
-      <ThemedText type="title">Capture a meal</ThemedText>
+      <IconSymbol name="person.fill" size={80} color={iconColor as string} style={{ marginBottom: 8 }} />
+      <ThemedText type="title">Profile</ThemedText>
 
-      <ThemedText style={{ marginTop: 12 }}>Select or take a photo of your meal (optional)</ThemedText>
-
-      {Platform.OS === 'web' ? (
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          style={{ marginTop: 8, backgroundColor: bgColor as any, color: textColor as any, borderColor: borderColor as any, borderWidth: 1, padding: 8, borderRadius: 6 }}
-        />
+      {!loading ? (
+        <View style={styles.card}>
+          {firstName ? <ThemedText style={{ fontSize: 16, marginBottom: 4 }}>Hello, {firstName}</ThemedText> : null}
+          {email ? <ThemedText style={{ opacity: 0.8 }}>Email: {email}</ThemedText> : null}
+          {goal ? <ThemedText style={{ opacity: 0.8 }}>Goal: {goal.replace(/_/g, ' ').toLowerCase()}</ThemedText> : null}
+          {typeof calorieGoal === 'number' ? <ThemedText style={{ opacity: 0.8 }}>Calorie goal: {calorieGoal} kcal</ThemedText> : null}
+        </View>
       ) : (
-        <Button title="Select photo (native not implemented)" onPress={() => {}} />
+        <ThemedText style={{ marginTop: 8 }}>Loading…</ThemedText>
       )}
 
-      {filePreview ? <Image source={{ uri: filePreview }} style={{ width: 220, height: 140, marginTop: 12, borderRadius: 8, borderWidth: 1, borderColor: borderColor as any }} /> : null}
-
       <View style={{ height: 12 }} />
-
-      <Button title={estimating ? 'Estimating…' : 'Estimate calories & ingredients'} onPress={runEstimate} disabled={estimating} />
-
-      <View style={{ height: 12 }} />
-
-      <ThemedText style={{ marginBottom: 6 }}>Estimated / Edit</ThemedText>
-      <View style={{ width: '100%' }}>
-        <TextInput value={mealType} onChangeText={setMealType} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
-        <TextInput value={calories} onChangeText={setCalories} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} keyboardType="numeric" />
-        <TextInput value={ingredients} onChangeText={setIngredients} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
-        {Platform.OS === 'web' ? (
-          <input
-            type="date"
-            value={date}
-            onChange={(e: any) => setDate(e.target.value)}
-            style={{ marginTop: 8, backgroundColor: bgColor as any, color: textColor as any, borderColor: borderColor as any, borderWidth: 1, padding: 8, borderRadius: 6 }}
-          />
-        ) : (
-          <TextInput value={date} onChangeText={setDate} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
-        )}
-        <TextInput value={time} onChangeText={setTime} style={[styles.input, { color: textColor, borderColor: borderColor, backgroundColor: bgColor }]} placeholderTextColor={borderColor as any} />
-      </View>
-
-      <View style={{ height: 12 }} />
-      <Button title={saving ? 'Saving…' : 'Save meal'} onPress={handleSave} disabled={saving} />
+      <Button title="Open Profile Settings" onPress={() => router.push('/profile/settings')} />
+      <View style={{ height: 8 }} />
+      <Button title={busy ? 'Signing out…' : 'Sign Out'} onPress={handleSignOut} disabled={busy} />
+      <View style={{ height: 8 }} />
+      <Button title={busy ? 'Deleting…' : 'Delete Account'} color="#d9534f" onPress={handleDeleteAccount} disabled={busy} />
     </ThemedView>
   );
 }
@@ -138,13 +112,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
-  input: {
-    height: 40,
-    width: 300,
+  card: {
+    width: '100%',
     borderWidth: 1,
-    borderColor: '#ddd',
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    marginBottom: 8,
+    borderColor: '#e6e6e6',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+    backgroundColor: '#ffffff10',
   },
 });

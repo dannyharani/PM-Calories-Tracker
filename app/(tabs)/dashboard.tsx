@@ -3,20 +3,19 @@ import { ThemedView } from '@/components/themed-view';
 // Avatar uses ThemedText initial; IconSymbol import removed
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient } from '@/src/amplifyClient';
-import { deleteUser as deleteUserMutation } from '@/src/graphql/mutations';
 import { getUser } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
-import { deleteUser as deleteUserAuth, getCurrentUser, signOut } from 'aws-amplify/auth';
+import { getCurrentUser } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { showAlert, showConfirm } from '../../src/utils/alert';
+// Alerts not needed here; dashboard is read-only now for account actions
 
 // GraphQL client is loaded lazily when needed to ensure Amplify is configured first
 
 export default function DashboardScreen() {
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  // Clean header; user actions moved to Profile tab
   const [userId, setUserId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -31,9 +30,8 @@ export default function DashboardScreen() {
   const [calorieGoal, setCalorieGoal] = useState<number | null>(null);
   const [macroGoals, setMacroGoals] = useState<{ protein: number; carbs: number; fat: number } | null>(null);
   const [mealsToday, setMealsToday] = useState<any[]>([]);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  // Removed sign out/delete from dashboard; handled in Profile tab
+  const [statusMessage] = useState<string | null>(null);
   const router = useRouter();
 
   // Helpers to format dates for HTML date inputs and parse them as local dates
@@ -70,7 +68,7 @@ export default function DashboardScreen() {
           authMode: 'userPool'
         });
 
-        const userProfile = result.data.getUser;
+  const userProfile = result.data.getUser;
 
         if (mounted) {
           // Set the name!
@@ -83,10 +81,26 @@ export default function DashboardScreen() {
           const cals = userProfile?.calorieGoal ?? null;
           setCalorieGoal(cals);
           if (cals) {
+            const goalType = (userProfile?.goal || 'MAINTAIN_WEIGHT') as string;
+            let pPct = 0.3, cPct = 0.4, fPct = 0.3;
+            switch (goalType) {
+              case 'LOSE_WEIGHT':
+              case 'LOSE_FAT':
+                pPct = 0.35; cPct = 0.35; fPct = 0.30; // higher protein, moderate carbs
+                break;
+              case 'GAIN_WEIGHT':
+                pPct = 0.25; cPct = 0.50; fPct = 0.25; // more carbs for surplus
+                break;
+              case 'BUILD_MUSCLE':
+                pPct = 0.35; cPct = 0.45; fPct = 0.20; // high protein, leaner fats
+                break;
+              default:
+                pPct = 0.30; cPct = 0.40; fPct = 0.30; // maintain
+            }
             setMacroGoals({
-              protein: Math.round((0.3 * cals) / 4),
-              carbs: Math.round((0.4 * cals) / 4),
-              fat: Math.round((0.3 * cals) / 9),
+              protein: Math.round((pPct * cals) / 4),
+              carbs: Math.round((cPct * cals) / 4),
+              fat: Math.round((fPct * cals) / 9),
             });
           } else {
             setMacroGoals(null);
@@ -113,9 +127,7 @@ export default function DashboardScreen() {
     }, [fetchUser])
   );
 
-  // Fetch meals whenever selectedDate or userId changes
-  useEffect(() => {
-    const fetchMealsForDate = async (dateToFetch: Date, id: string) => {
+  const fetchMealsForDate = useCallback(async (dateToFetch: Date, id: string) => {
       try {
         const startOfDay = new Date(dateToFetch.getFullYear(), dateToFetch.getMonth(), dateToFetch.getDate(), 0, 0, 0, 0);
         const endOfDay = new Date(dateToFetch.getFullYear(), dateToFetch.getMonth(), dateToFetch.getDate(), 23, 59, 59, 999);
@@ -153,69 +165,32 @@ export default function DashboardScreen() {
         setTodayCarbs(0);
         setTodayFat(0);
       }
-    };
+    }, []);
+
+  // Fetch meals whenever selectedDate or userId changes
+  useEffect(() => {
 
     if (userId) {
       fetchMealsForDate(selectedDate, userId);
     }
 
     console.log(selectedDate)
-  }, [selectedDate, userId]);
+  }, [selectedDate, userId, fetchMealsForDate]);
 
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    setStatusMessage('Signing out...');
-    try {
-      await signOut();
-      router.replace('/auth/sign-in');
-    } catch (error: any) {
-      console.error('Error signing out: ', error);
-      setStatusMessage(error?.message || 'Failed to sign out');
-      setIsSigningOut(false);
-    }
-  };
+  // Refetch meals when dashboard gains focus (after adding a meal)
+  useFocusEffect(
+    useCallback(() => {
+      if (userId) fetchMealsForDate(selectedDate, userId);
+      return () => {};
+    }, [userId, selectedDate, fetchMealsForDate])
+  );
 
-  const handleDeleteAccount = async () => {
-    const confirmed = await showConfirm('Delete account', 'This will permanently delete your account. Are you sure?');
-    if (!confirmed) return;
-
-    setIsDeleting(true);
-    setStatusMessage('Deleting account...');
-    try {
-      const { userId } = await getCurrentUser();
-      if (!userId) {
-        throw new Error("Could not find user ID.");
-      }
-
-  const client = await getGraphQLClient();
-  await client.graphql({
-        query: deleteUserMutation,
-        variables: { input: { id: userId } },
-        authMode: 'userPool'
-      });
-
-      await deleteUserAuth();
-
-      await showAlert('Account deleted', 'Your account has been deleted.');
-      router.replace('/auth/sign-up');
-
-    } catch (err: any) {
-      console.error('Error deleting user', err);
-      const msg = err?.message || 'Failed to delete account';
-      await showAlert('Error', msg);
-      setStatusMessage(msg);
-      setIsDeleting(false);
-    }
-  };
+  // Sign out / delete logic moved to Profile tab
 
   return (
     <ThemedView style={styles.container}>
       <View style={styles.headerRow}>
         <ThemedText type="title">Dashboard</ThemedText>
-        <TouchableOpacity onPress={() => setShowUserMenu((s) => !s)} style={[styles.userIcon, { borderRadius: 20, backgroundColor: menuBg as any }]}>
-          {/* Show an initial or fallback avatar so the icon is always visible and sizable */}
-          <ThemedText style={{ fontSize: 16, color: iconColor as any }}>{firstName ? firstName.charAt(0).toUpperCase() : '👤'}</ThemedText>
-        </TouchableOpacity>
       </View>
       {/* Date picker to select which day's meals to view */}
       <View style={styles.dateRow}>
@@ -235,12 +210,11 @@ export default function DashboardScreen() {
       </View>
   <ThemedText>{firstName ? `Hello, ${firstName}` : 'Welcome to your dashboard!'}</ThemedText>
   <View style={{ height: 8 }} />
-  <Button title="Add meal" onPress={() => router.push('/meal/add')} />
+  <Button title="Add meal" onPress={() => router.push('/(tabs)/meal/add')} />
       {/* Today's calories summary and progress */}
       {calorieGoal ? (
-        <View style={{ width: '100%', marginTop: 16 }}>
-          <ThemedText style={{ marginBottom: 6 }}>{"Today's calories: "}{todayCalories}{' kcal'}</ThemedText>
-          <ThemedText style={{ marginBottom: 6 }}>{'Goal: '}{calorieGoal}{' kcal'}</ThemedText>
+        <View style={styles.card}>
+          <ThemedText style={{ marginBottom: 4 }}>{`Calories: ${todayCalories}/${calorieGoal} kcal (${((todayCalories/Math.max(1,calorieGoal))*100).toFixed(0)}%)`}</ThemedText>
           <View style={styles.progressBar}>
             <View
               style={[
@@ -259,15 +233,18 @@ export default function DashboardScreen() {
           </ThemedText>
           {macroGoals ? (
             <View style={{ marginTop: 8 }}>
-              <ThemedText>{`Protein: ${Math.round(todayProtein)}g / ${macroGoals.protein}g`}</ThemedText>
-              <ThemedText>{`Carbs: ${Math.round(todayCarbs)}g / ${macroGoals.carbs}g`}</ThemedText>
-              <ThemedText>{`Fat: ${Math.round(todayFat)}g / ${macroGoals.fat}g`}</ThemedText>
+              <ThemedText>{`Protein: ${Math.round(todayProtein)}/${macroGoals.protein} g (${((todayProtein/Math.max(1,macroGoals.protein))*100).toFixed(0)}%)`}</ThemedText>
+              <View style={styles.macroBar}><View style={[styles.macroFill, { width: `${Math.min((todayProtein/Math.max(1,macroGoals.protein))*100, 100)}%`, backgroundColor: '#6c5ce7' }]} /></View>
+              <ThemedText style={{ marginTop: 4 }}>{`Carbs: ${Math.round(todayCarbs)}/${macroGoals.carbs} g (${((todayCarbs/Math.max(1,macroGoals.carbs))*100).toFixed(0)}%)`}</ThemedText>
+              <View style={styles.macroBar}><View style={[styles.macroFill, { width: `${Math.min((todayCarbs/Math.max(1,macroGoals.carbs))*100, 100)}%`, backgroundColor: '#00b894' }]} /></View>
+              <ThemedText style={{ marginTop: 4 }}>{`Fat: ${Math.round(todayFat)}/${macroGoals.fat} g (${((todayFat/Math.max(1,macroGoals.fat))*100).toFixed(0)}%)`}</ThemedText>
+              <View style={styles.macroBar}><View style={[styles.macroFill, { width: `${Math.min((todayFat/Math.max(1,macroGoals.fat))*100, 100)}%`, backgroundColor: '#fdcb6e' }]} /></View>
             </View>
           ) : null}
           {mealsToday && mealsToday.length > 0 ? (
             <View style={{ marginTop: 8 }}>
               {mealsToday.map((m: any) => (
-                <TouchableOpacity key={m.id} onPress={() => router.push({ pathname: '/meal/[id]', params: { id: m.id } })} style={{ paddingVertical: 6 }}>
+                <TouchableOpacity key={m.id} onPress={() => router.push({ pathname: '/(tabs)/meal/[id]', params: { id: m.id } })} style={{ paddingVertical: 6 }}>
                   <ThemedText style={{ fontSize: 14 }}>{`${m.mealType}: ${m.calories} kcal`}</ThemedText>
                   {typeof m.proteinGrams === 'number' ? (
                     <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>{`P ${Math.round(m.proteinGrams)}g · C ${Math.round(m.carbsGrams || 0)}g · F ${Math.round(m.fatGrams || 0)}g`}</ThemedText>
@@ -281,20 +258,6 @@ export default function DashboardScreen() {
         <ThemedText style={{ marginTop: 12 }}>Set your calorie goal in your profile to see daily progress.</ThemedText>
       )}
       {statusMessage ? <ThemedText style={styles.status}>{statusMessage}</ThemedText> : null}
-
-      {/* User menu dropdown */}
-      {showUserMenu ? (
-        <View style={[
-          styles.userMenu,
-          { backgroundColor: menuBg as any, borderColor: menuBorder as any, position: 'absolute', right: 12, top: 56, zIndex: 2000 },
-        ]}>
-          <Button title={isSigningOut ? 'Signing out...' : 'Sign Out'} onPress={() => { setShowUserMenu(false); handleSignOut(); }} disabled={isSigningOut || isDeleting} />
-          <View style={{ height: 8 }} />
-          <Button title={isDeleting ? 'Deleting...' : 'Delete Account'} color="#d9534f" onPress={() => { setShowUserMenu(false); handleDeleteAccount(); }} disabled={isSigningOut || isDeleting} />
-          <View style={{ height: 8 }} />
-          <Button title="Profile Settings" onPress={() => { setShowUserMenu(false); router.push('/profile/settings'); }} />
-        </View>
-      ) : null}
       {/* Native DateTimePicker dialog for non-web platforms */}
       {Platform.OS !== 'web' && showDatePicker && (
         <DateTimePicker
@@ -320,6 +283,15 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     position: 'relative',
   },
+  card: {
+    width: '100%',
+    marginTop: 16,
+    borderRadius: 12,
+    padding: 16,
+    backgroundColor: '#ffffff10',
+    borderWidth: 1,
+    borderColor: '#e2e2e2',
+  },
   status: {
     marginVertical: 10,
     color: '#ff6b6b',
@@ -334,6 +306,17 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 8,
+  },
+  macroBar: {
+    height: 8,
+    backgroundColor: '#f2f2f2',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  macroFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   headerRow: {
     width: '100%',
