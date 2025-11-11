@@ -6,9 +6,10 @@ import { getGraphQLClient } from '@/src/amplifyClient';
 import { deleteUser as deleteUserMutation } from '@/src/graphql/mutations';
 import { getUser } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import { deleteUser as deleteUserAuth, getCurrentUser, signOut } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Button, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { showAlert, showConfirm } from '../../src/utils/alert';
 
@@ -49,9 +50,8 @@ export default function DashboardScreen() {
     if (parts.length !== 3) return new Date(s);
     return new Date(parts[0], parts[1] - 1, parts[2]);
   };
-  useEffect(() => {
+  const fetchUser = useCallback(async () => {
     let mounted = true;
-    const fetchUser = async () => {
       try {
         const cognitoUser: any = await getCurrentUser();
         const id = cognitoUser?.userId || cognitoUser?.attributes?.sub || cognitoUser?.username;
@@ -96,12 +96,22 @@ export default function DashboardScreen() {
         console.error('Error fetching user data:', err);
         router.replace('/auth/sign-in');
       }
-    };
-    fetchUser();
-    return () => {
-      mounted = false;
-    };
+    // mark unmounted
+    mounted = false;
   }, [router]);
+
+  useEffect(() => {
+    fetchUser();
+    return () => {};
+  }, [fetchUser]);
+
+  // Refetch when screen gains focus (e.g., returning from settings)
+  useFocusEffect(
+    useCallback(() => {
+      fetchUser();
+      return () => {};
+    }, [fetchUser])
+  );
 
   // Fetch meals whenever selectedDate or userId changes
   useEffect(() => {
@@ -281,6 +291,8 @@ export default function DashboardScreen() {
           <Button title={isSigningOut ? 'Signing out...' : 'Sign Out'} onPress={() => { setShowUserMenu(false); handleSignOut(); }} disabled={isSigningOut || isDeleting} />
           <View style={{ height: 8 }} />
           <Button title={isDeleting ? 'Deleting...' : 'Delete Account'} color="#d9534f" onPress={() => { setShowUserMenu(false); handleDeleteAccount(); }} disabled={isSigningOut || isDeleting} />
+          <View style={{ height: 8 }} />
+          <Button title="Profile Settings" onPress={() => { setShowUserMenu(false); router.push('/profile/settings'); }} />
         </View>
       ) : null}
       {/* Native DateTimePicker dialog for non-web platforms */}

@@ -6,6 +6,7 @@ import { getUrl } from 'aws-amplify/storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Button, Image, StyleSheet, View } from 'react-native';
+import { isStorageConfigured } from '../../src/utils/storage';
 
 // Client will be loaded lazily on demand
 
@@ -27,7 +28,7 @@ export default function MealDetail() {
   const res: any = await client.graphql({ query: getMealQuery, variables: { id }, authMode: 'userPool' });
         const data = res?.data?.getMeal;
         if (mounted) setMeal(data || null);
-        if (mounted && data?.photoKey) {
+        if (mounted && data?.photoKey && isStorageConfigured()) {
           try {
             const result = await getUrl({ key: data.photoKey, options: { expiresIn: 3600 } });
             setPhotoUrl(result.url.toString());

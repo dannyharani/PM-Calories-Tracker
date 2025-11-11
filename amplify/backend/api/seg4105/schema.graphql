@@ -23,6 +23,8 @@ enum Goal {
   LOSE_WEIGHT
   MAINTAIN_WEIGHT
   GAIN_WEIGHT
+  BUILD_MUSCLE
+  LOSE_FAT
 }
 
 type Meal @model @auth(rules: [{allow: owner}]) {

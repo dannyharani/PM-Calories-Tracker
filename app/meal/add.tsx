@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Button, Image, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { estimateFromLabels, estimateFromMealType, MealType as EstMealType } from '../../src/utils/macroEstimator';
+import { getStorageMissingMessage, isStorageConfigured } from '../../src/utils/storage';
 
 // Client will be loaded lazily when saving
 
@@ -90,7 +91,7 @@ export default function AddMealScreen() {
       const nowIso = new Date().toISOString();
       const est = estimation || estimateFromMealType(mealType as EstMealType);
       let photoKey: string | undefined;
-      if (photoUri) {
+      if (photoUri && isStorageConfigured()) {
         // Upload to S3. Convert to blob (Expo fetch) then Storage.put.
         const response = await fetch(photoUri);
         const blob = await response.blob();
@@ -98,6 +99,9 @@ export default function AddMealScreen() {
         const key = `meal-photos/${userId}/${Date.now()}.${ext}`;
         await uploadData({ key, data: blob, options: { contentType: (blob as any).type || 'image/jpeg' } }).result;
         photoKey = key;
+      } else if (photoUri && !isStorageConfigured()) {
+        // Do not block saving the meal; just inform the user.
+        setError(getStorageMissingMessage());
       }
 
       const input: any = {
