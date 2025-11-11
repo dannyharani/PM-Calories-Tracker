@@ -4,10 +4,12 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
 import { createUser as createUserMutation, updateUser as updateUserMutation } from '@/src/graphql/mutations';
 import { getUser as getUserQuery } from '@/src/graphql/queries';
+import { uploadPhotoBlob } from '@/src/storage';
 import { fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Button, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Button, Image, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 // Utility: compute age from DOB (YYYY-MM-DD)
 function dobToAge(dob?: string | null): number | null {
@@ -29,6 +31,8 @@ export default function ProfileSettings() {
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [statusMsg, setStatusMsg] = useState<string>('');
   const [isExistingUser, setIsExistingUser] = useState<boolean>(false);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [photoKey, setPhotoKey] = useState<string | null>(null);
 
   // Editable fields
   const [firstName, setFirstName] = useState('');
@@ -114,6 +118,54 @@ export default function ProfileSettings() {
     })();
     return () => { mounted = false; };
   }, []);
+
+  // Pick an image from library and upload to S3 using protected access
+  const pickAndUpload = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Please allow photo library access.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.9,
+        allowsEditing: true,
+      });
+      if ((result as any).canceled) return;
+      const asset = (result as any).assets?.[0];
+      const uri = asset?.uri;
+      if (!uri) return;
+      setPreviewUri(uri);
+      // Convert URI to Blob and upload
+      const blob = await (await fetch(uri)).blob();
+      const current = await getCurrentUser();
+      const userId = (current as any)?.userId || (current as any)?.attributes?.sub || (current as any)?.username;
+      if (!userId) throw new Error('Not signed in');
+      const key = await uploadPhotoBlob(blob as any, String(userId));
+      setPhotoKey(key);
+      Alert.alert('Uploaded!', `S3 key:\n${key}`);
+      // Try to persist key to User.profile (requires backend to have photoKey field)
+      try {
+        const client = await getGraphQLClient();
+        const authMode = await getPreferredAuthMode();
+        const updateUserPhoto = /* GraphQL */ `
+          mutation UpdateUserPhoto($input: UpdateUserInput!) {
+            updateUser(input: $input) { id photoKey }
+          }
+        `;
+        await (client as any).graphql({
+          query: updateUserPhoto,
+          variables: { input: { id: String(userId), photoKey: key } },
+          ...(authMode ? { authMode } : {}),
+        });
+      } catch {
+        // Likely schema not yet pushed; keep key locally and allow retry after push
+      }
+    } catch (e: any) {
+      Alert.alert('Upload failed', e?.message || 'Unable to upload photo');
+    }
+  };
 
   const onSave = async () => {
     setErrorMsg('');
@@ -207,6 +259,16 @@ export default function ProfileSettings() {
 
         {errorMsg ? <ThemedText style={styles.error}>{errorMsg}</ThemedText> : null}
         {statusMsg ? <ThemedText style={styles.status}>{statusMsg}</ThemedText> : null}
+
+        <View style={styles.buttonRow}>
+          <Button title="Pick & Upload Photo" onPress={pickAndUpload} />
+        </View>
+        {previewUri ? (
+          <Image source={{ uri: previewUri }} style={{ width: 200, height: 200, marginTop: 12, borderRadius: 8 }} />
+        ) : null}
+        {photoKey ? (
+          <ThemedText style={{ marginTop: 8 }}>Saved S3 key: {photoKey}</ThemedText>
+        ) : null}
 
         <View style={styles.buttonRow}>
           <Button title={saving ? 'Saving…' : 'Save Changes'} onPress={onSave} disabled={saving} />

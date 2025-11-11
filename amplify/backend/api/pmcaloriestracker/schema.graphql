@@ -37,6 +37,7 @@ type User @model
   age: Int
   goalDate: AWSDate
   calorieGoal: Int
+  photoKey: String
   meals: [Meal] @hasMany(indexName: "byUser", fields: ["id"]) # connection via userMealsId
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
