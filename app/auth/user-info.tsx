@@ -1,15 +1,15 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { getGraphQLClient } from '@/src/amplifyClient';
 import { createUser, updateUser } from '@/src/graphql/mutations';
 import { getUser as getUserQuery } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { generateClient } from 'aws-amplify/api';
 import { fetchUserAttributes, getCurrentUser } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Button, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import awsconfig from '../../src/aws-exports';
+// awsconfig no longer needed for raw fetch when using Amplify client
 
 const UserInfo = () => {
   const [firstName, setFirstName] = useState('');
@@ -43,8 +43,6 @@ const UserInfo = () => {
     return age;
   }
 
-  const client = generateClient();
-
   // load existing profile
   useEffect(() => {
     let mounted = true;
@@ -54,14 +52,9 @@ const UserInfo = () => {
         const id = cognito?.userId || cognito?.attributes?.sub || cognito?.username;
         if (!id) return;
         setUserId(id);
-
-        const resp = await fetch(awsconfig.aws_appsync_graphqlEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': awsconfig.aws_appsync_apiKey },
-          body: JSON.stringify({ query: getUserQuery, variables: { id } }),
-        });
-        const json = await resp.json();
-        const existing = json?.data?.getUser;
+        const client = await getGraphQLClient();
+        const existingResp: any = await client.graphql({ query: getUserQuery, variables: { id }, authMode: 'userPool' });
+        const existing = existingResp?.data?.getUser;
         if (existing && mounted) {
           setIsExistingUser(true);
           setFirstName(existing.firstName || '');
@@ -133,11 +126,12 @@ const UserInfo = () => {
       };
 
       const queryToUse = isExistingUser ? updateUser : createUser;
-      const resp = await client.graphql({query: queryToUse, variables: {input}, authMode: 'userPool'})
+  const client = await getGraphQLClient();
+  const resp = await client.graphql({query: queryToUse, variables: {input}, authMode: 'userPool'})
 
       if (resp.errors) throw new Error(resp.errors[0]?.message || 'GraphQL error');
 
-      router.replace('/dashboard');
+  router.replace('/(tabs)/dashboard');
     } catch (err: any) {
       console.error('Error saving user info', err);
       setErrorMsg(err?.message || 'Failed to save user info');

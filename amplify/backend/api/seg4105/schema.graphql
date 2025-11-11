@@ -31,6 +31,14 @@ type Meal @model @auth(rules: [{allow: owner}]) {
   mealType: MealType!
   calories: Int!
   estimatedIngredients: [String]
+  # Optional macro breakdown estimates
+  proteinGrams: Float
+  carbsGrams: Float
+  fatGrams: Float
+  # Optional image reference (e.g., S3 key) for the meal photo
+  photoKey: String
+  # Confidence score (0-1) for estimates
+  estimateConfidence: Float
   user: User @belongsTo
 }
 

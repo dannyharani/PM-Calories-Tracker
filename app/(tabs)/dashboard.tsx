@@ -2,17 +2,17 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 // Avatar uses ThemedText initial; IconSymbol import removed
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { getGraphQLClient } from '@/src/amplifyClient';
 import { deleteUser as deleteUserMutation } from '@/src/graphql/mutations';
-import { getUser, listMeals } from '@/src/graphql/queries';
+import { getUser } from '@/src/graphql/queries';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { generateClient } from 'aws-amplify/api';
 import { deleteUser as deleteUserAuth, getCurrentUser, signOut } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Button, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
-import { showAlert, showConfirm } from '../utils/alert';
+import { showAlert, showConfirm } from '../../src/utils/alert';
 
-const client = generateClient();
+// GraphQL client is loaded lazily when needed to ensure Amplify is configured first
 
 export default function DashboardScreen() {
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -24,7 +24,11 @@ export default function DashboardScreen() {
   const iconColor = useThemeColor({}, 'icon');
   const [firstName, setFirstName] = useState<string | null>(null);
   const [todayCalories, setTodayCalories] = useState<number>(0);
+  const [todayProtein, setTodayProtein] = useState<number>(0);
+  const [todayCarbs, setTodayCarbs] = useState<number>(0);
+  const [todayFat, setTodayFat] = useState<number>(0);
   const [calorieGoal, setCalorieGoal] = useState<number | null>(null);
+  const [macroGoals, setMacroGoals] = useState<{ protein: number; carbs: number; fat: number } | null>(null);
   const [mealsToday, setMealsToday] = useState<any[]>([]);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -59,7 +63,8 @@ export default function DashboardScreen() {
 
         setUserId(id);
 
-        const result: any = await client.graphql({
+  const client = await getGraphQLClient();
+  const result: any = await client.graphql({
           query: getUser,
           variables: { id },
           authMode: 'userPool'
@@ -75,8 +80,17 @@ export default function DashboardScreen() {
             setFirstName(cognitoUser.username || cognitoUser.attributes?.email || null);
           }
 
-          // store calorie goal from profile
-          setCalorieGoal(userProfile?.calorieGoal ?? null);
+          const cals = userProfile?.calorieGoal ?? null;
+          setCalorieGoal(cals);
+          if (cals) {
+            setMacroGoals({
+              protein: Math.round((0.3 * cals) / 4),
+              carbs: Math.round((0.4 * cals) / 4),
+              fat: Math.round((0.3 * cals) / 9),
+            });
+          } else {
+            setMacroGoals(null);
+          }
         }
       } catch (err) {
         console.error('Error fetching user data:', err);
@@ -96,8 +110,15 @@ export default function DashboardScreen() {
         const startOfDay = new Date(dateToFetch.getFullYear(), dateToFetch.getMonth(), dateToFetch.getDate(), 0, 0, 0, 0);
         const endOfDay = new Date(dateToFetch.getFullYear(), dateToFetch.getMonth(), dateToFetch.getDate(), 23, 59, 59, 999);
 
-        const mealsResult: any = await client.graphql({
-          query: listMeals,
+        const listMealsForDashboard = /* GraphQL */ `
+          query ListMeals($filter: ModelMealFilterInput) {
+            listMeals(filter: $filter) { items { id mealType calories proteinGrams carbsGrams fatGrams date photoKey } }
+          }
+        `;
+
+  const client = await getGraphQLClient();
+  const mealsResult: any = await client.graphql({
+          query: listMealsForDashboard,
           variables: {
             filter: {
               userMealsId: { eq: id },
@@ -111,10 +132,16 @@ export default function DashboardScreen() {
         setMealsToday(items);
         const total = items.reduce((s: number, m: any) => s + (m?.calories || 0), 0);
         setTodayCalories(total);
+        setTodayProtein(items.reduce((s: number, m: any) => s + (m?.proteinGrams || 0), 0));
+        setTodayCarbs(items.reduce((s: number, m: any) => s + (m?.carbsGrams || 0), 0));
+        setTodayFat(items.reduce((s: number, m: any) => s + (m?.fatGrams || 0), 0));
       } catch (err) {
         console.warn('Could not fetch meals for date', err);
         setMealsToday([]);
         setTodayCalories(0);
+        setTodayProtein(0);
+        setTodayCarbs(0);
+        setTodayFat(0);
       }
     };
 
@@ -150,7 +177,8 @@ export default function DashboardScreen() {
         throw new Error("Could not find user ID.");
       }
 
-      await client.graphql({
+  const client = await getGraphQLClient();
+  await client.graphql({
         query: deleteUserMutation,
         variables: { input: { id: userId } },
         authMode: 'userPool'
@@ -195,7 +223,9 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
       </View>
-      <ThemedText>{firstName ? `Hello, ${firstName}` : 'Welcome to your dashboard!'}</ThemedText>
+  <ThemedText>{firstName ? `Hello, ${firstName}` : 'Welcome to your dashboard!'}</ThemedText>
+  <View style={{ height: 8 }} />
+  <Button title="Add meal" onPress={() => router.push('/meal/add')} />
       {/* Today's calories summary and progress */}
       {calorieGoal ? (
         <View style={{ width: '100%', marginTop: 16 }}>
@@ -217,11 +247,21 @@ export default function DashboardScreen() {
               ? `Over by ${todayCalories - calorieGoal} kcal`
               : `Remaining ${calorieGoal - todayCalories} kcal`}
           </ThemedText>
+          {macroGoals ? (
+            <View style={{ marginTop: 8 }}>
+              <ThemedText>{`Protein: ${Math.round(todayProtein)}g / ${macroGoals.protein}g`}</ThemedText>
+              <ThemedText>{`Carbs: ${Math.round(todayCarbs)}g / ${macroGoals.carbs}g`}</ThemedText>
+              <ThemedText>{`Fat: ${Math.round(todayFat)}g / ${macroGoals.fat}g`}</ThemedText>
+            </View>
+          ) : null}
           {mealsToday && mealsToday.length > 0 ? (
             <View style={{ marginTop: 8 }}>
               {mealsToday.map((m: any) => (
                 <TouchableOpacity key={m.id} onPress={() => router.push({ pathname: '/meal/[id]', params: { id: m.id } })} style={{ paddingVertical: 6 }}>
                   <ThemedText style={{ fontSize: 14 }}>{`${m.mealType}: ${m.calories} kcal`}</ThemedText>
+                  {typeof m.proteinGrams === 'number' ? (
+                    <ThemedText style={{ fontSize: 12, opacity: 0.8 }}>{`P ${Math.round(m.proteinGrams)}g · C ${Math.round(m.carbsGrams || 0)}g · F ${Math.round(m.fatGrams || 0)}g`}</ThemedText>
+                  ) : null}
                 </TouchableOpacity>
               ))}
             </View>

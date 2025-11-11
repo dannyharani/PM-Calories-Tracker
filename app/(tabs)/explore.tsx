@@ -2,15 +2,15 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { getGraphQLClient } from '@/src/amplifyClient';
 import { createMeal as createMealMutation } from '@/src/graphql/mutations';
-import { generateClient } from 'aws-amplify/api';
 import { getCurrentUser } from 'aws-amplify/auth';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Button, Platform, StyleSheet, TextInput, View } from 'react-native';
 
-const client = generateClient();
+// Client will be loaded when saving
 
 export default function ExploreTab() {
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -70,9 +70,10 @@ export default function ExploreTab() {
         userMealsId: userId,
       };
 
-      await client.graphql({ query: createMealMutation, variables: { input }, authMode: 'userPool' });
-      // go back to dashboard after saving
-      router.replace('/dashboard');
+  const client = await getGraphQLClient();
+  await client.graphql({ query: createMealMutation, variables: { input }, authMode: 'userPool' });
+  // go back to dashboard after saving
+  router.replace('/(tabs)/dashboard');
     } catch (err) {
       console.warn('Could not save meal', err);
     } finally {
