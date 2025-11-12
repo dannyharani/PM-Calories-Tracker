@@ -2,10 +2,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { getGraphQLClient, getPreferredAuthMode } from '@/src/amplifyClient';
-import { deleteUser as deleteUserMutation } from '@/src/graphql/mutations';
-import { getUser as getUserQuery } from '@/src/graphql/queries';
-import { deleteUser as deleteUserAuth, getCurrentUser, signOut } from 'aws-amplify/auth';
+// Offline-first: remove GraphQL; use local profile summary
+import { getProfileSummary } from '@/src/local/profileSummary';
+import { deleteUser as deleteUserAuth, fetchUserAttributes, getCurrentUser, signOut } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Button, StyleSheet, View } from 'react-native';
@@ -25,24 +24,26 @@ export default function ProfileTab() {
   // const textColor = useThemeColor({}, 'text');
   // const borderColor = useThemeColor({}, 'icon');
   const iconColor = useThemeColor({}, 'icon');
+  const [summary, setSummary] = useState<any | null>(null);
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const cognito: any = await getCurrentUser();
-        const id = cognito?.userId || cognito?.attributes?.sub || cognito?.username;
-        const client = await getGraphQLClient();
-  const authMode = await getPreferredAuthMode();
-  const res: any = await client.graphql({ query: getUserQuery, variables: { id }, ...(authMode ? { authMode } : {}) });
-        const u = res?.data?.getUser;
-        if (mounted) {
-          setFirstName(u?.firstName || cognito?.username || null);
-          setEmail(u?.email || cognito?.attributes?.email || null);
-          setGoal(u?.goal || null);
-          setCalorieGoal(typeof u?.calorieGoal === 'number' ? u.calorieGoal : null);
-        }
+        const attrs = await fetchUserAttributes();
+        const summary = await getProfileSummary();
+        if (!mounted) return;
+        setFirstName(summary.profile?.firstName || cognito?.username || null);
+        setEmail(attrs?.email || null);
+        setGoal(summary.profile?.goal || null);
+        setCalorieGoal(
+          typeof summary.profile?.calorieGoal === 'number'
+            ? summary.profile!.calorieGoal
+            : summary.adjustedCalories ?? null
+        );
+        setSummary(summary);
       } catch {
-        // noop
+        // ignore
       } finally {
         mounted && setLoading(false);
       }
@@ -63,21 +64,16 @@ export default function ProfileTab() {
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = await showConfirm('Delete account', 'This will permanently delete your account. Are you sure?');
+    const confirmed = await showConfirm('Delete account', 'Local data will be cleared (remote account deletion disabled in offline mode). Proceed?');
     if (!confirmed) return;
     setBusy(true);
     try {
-      const { userId } = await getCurrentUser();
-      const client = await getGraphQLClient();
-      await client.graphql({ query: deleteUserMutation, variables: { input: { id: userId } }, authMode: 'userPool' });
       await deleteUserAuth();
-      await showAlert('Account deleted', 'Your account has been deleted.');
+      await showAlert('Signed out', 'Account sign-out complete. (Remote deletion skipped)');
       router.replace('/auth/sign-up');
     } catch (e: any) {
-      await showAlert('Error', e?.message || 'Failed to delete account');
-    } finally {
-      setBusy(false);
-    }
+      await showAlert('Error', e?.message || 'Failed to sign out');
+    } finally { setBusy(false); }
   };
 
   return (
@@ -91,6 +87,15 @@ export default function ProfileTab() {
           {email ? <ThemedText style={{ opacity: 0.8 }}>Email: {email}</ThemedText> : null}
           {goal ? <ThemedText style={{ opacity: 0.8 }}>Goal: {goal.replace(/_/g, ' ').toLowerCase()}</ThemedText> : null}
           {typeof calorieGoal === 'number' ? <ThemedText style={{ opacity: 0.8 }}>Calorie goal: {calorieGoal} kcal</ThemedText> : null}
+          {summary?.bmr ? (
+            <ThemedText style={{ opacity: 0.7 }}>Estimated BMR: {summary.bmr} kcal</ThemedText>
+          ) : null}
+          {summary?.maintenanceCalories ? (
+            <ThemedText style={{ opacity: 0.7 }}>Maintenance est: {summary.maintenanceCalories} kcal</ThemedText>
+          ) : null}
+          {summary?.macroTargets ? (
+            <ThemedText style={{ opacity: 0.7 }}>{`Macros target (g): P ${summary.macroTargets.protein} · C ${summary.macroTargets.carbs} · F ${summary.macroTargets.fat}`}</ThemedText>
+          ) : null}
         </View>
       ) : (
         <ThemedText style={{ marginTop: 8 }}>Loading…</ThemedText>
