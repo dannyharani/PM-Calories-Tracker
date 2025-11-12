@@ -48,8 +48,7 @@ type User @model
 type Meal @model
 @auth(rules: [
   { allow: owner }
-])
-@index(name: "byUser", fields: ["userMealsId", "date"], queryField: "mealsByUserAndDate") {
+]) {
   id: ID!
   date: AWSDateTime!
   mealType: MealType!
@@ -60,7 +59,7 @@ type Meal @model
   fatGrams: Float
   estimateConfidence: Float
   photoKey: String
-  userMealsId: ID!
+  userMealsId: ID! @index(name: "byUser", sortKeyFields: ["date"], queryField: "mealsByUserAndDate")
   user: User @belongsTo(fields: ["userMealsId"])
   createdAt: AWSDateTime
   updatedAt: AWSDateTime
