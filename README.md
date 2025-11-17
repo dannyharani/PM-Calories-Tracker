@@ -21,7 +21,7 @@ The frontend is built for speed and portability using **React Native (Expo)**, w
 
 ## 🧪 Beta Testing (Android)
 
-We are currently in the Beta phase for Android! Your feedback is crucial to making this app better.
+Try out the Android release on your mobile device or an emulator.
 
 > **📱 Download the Beta**
 > The latest `.apk` file is available on the **[Releases Page](https://github.com/dannyharani/PM-Calories-Tracker/releases)**.
