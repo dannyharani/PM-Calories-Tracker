@@ -106,8 +106,18 @@ export const onCreateMeal = /* GraphQL */ `subscription OnCreateMeal(
     id
     date
     mealType
-    calories
     estimatedIngredients
+    mealName
+    calories
+    proteinGrams
+    carbsGrams
+    fatGrams
+    user_estimated_calories
+    user_estimated_proteinGrams
+    user_estimated_carbsGrams
+    user_estimated_fatGrams
+    photoKey
+    estimateConfidence
     user {
       id
       email
@@ -125,7 +135,7 @@ export const onCreateMeal = /* GraphQL */ `subscription OnCreateMeal(
       updatedAt
       __typename
     }
-    dateTime
+    status
     createdAt
     updatedAt
     userMealsId
@@ -145,8 +155,18 @@ export const onUpdateMeal = /* GraphQL */ `subscription OnUpdateMeal(
     id
     date
     mealType
-    calories
     estimatedIngredients
+    mealName
+    calories
+    proteinGrams
+    carbsGrams
+    fatGrams
+    user_estimated_calories
+    user_estimated_proteinGrams
+    user_estimated_carbsGrams
+    user_estimated_fatGrams
+    photoKey
+    estimateConfidence
     user {
       id
       email
@@ -164,7 +184,7 @@ export const onUpdateMeal = /* GraphQL */ `subscription OnUpdateMeal(
       updatedAt
       __typename
     }
-    dateTime
+    status
     createdAt
     updatedAt
     userMealsId
@@ -184,8 +204,18 @@ export const onDeleteMeal = /* GraphQL */ `subscription OnDeleteMeal(
     id
     date
     mealType
-    calories
     estimatedIngredients
+    mealName
+    calories
+    proteinGrams
+    carbsGrams
+    fatGrams
+    user_estimated_calories
+    user_estimated_proteinGrams
+    user_estimated_carbsGrams
+    user_estimated_fatGrams
+    photoKey
+    estimateConfidence
     user {
       id
       email
@@ -203,7 +233,7 @@ export const onDeleteMeal = /* GraphQL */ `subscription OnDeleteMeal(
       updatedAt
       __typename
     }
-    dateTime
+    status
     createdAt
     updatedAt
     userMealsId

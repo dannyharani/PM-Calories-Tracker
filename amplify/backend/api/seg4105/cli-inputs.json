@@ -10,7 +10,10 @@
     "additionalAuthTypes": [
       {
         "mode": "AMAZON_COGNITO_USER_POOLS",
-        "cognitoUserPoolId": "authseg4105d5970435"
+        "cognitoUserPoolId": "authseg4105359f2e93"
+      },
+      {
+        "mode": "AWS_IAM"
       }
     ]
   }

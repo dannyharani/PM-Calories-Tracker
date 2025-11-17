@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.dannyharani.SEG4105"
     },
     "web": {
       "output": "static",
@@ -38,11 +39,24 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to let you pick images.",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to let you take photos."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "bc3e05d1-eabe-47d6-a7e8-1168f461a0c9"
+      }
     }
   }
 }

@@ -23,15 +23,40 @@ enum Goal {
   LOSE_WEIGHT
   MAINTAIN_WEIGHT
   GAIN_WEIGHT
+  BUILD_MUSCLE
+  LOSE_FAT
 }
 
-type Meal @model @auth(rules: [{allow: owner}]) {
+type Meal @model @auth(rules: [{allow: owner}, {allow: private, provider: identityPool}]) {
   id: ID!
   date: AWSDateTime!
+
   mealType: MealType!
-  calories: Int!
   estimatedIngredients: [String]
+
+  mealName: String
+  calories: Int
+  proteinGrams: Float
+  carbsGrams: Float
+  fatGrams: Float
+
+  user_estimated_calories: Int
+  user_estimated_proteinGrams: Float
+  user_estimated_carbsGrams: Float
+  user_estimated_fatGrams: Float
+
+  photoKey: String
+  estimateConfidence: Float
   user: User @belongsTo
+
+  status: StatusType
+}
+
+enum StatusType {
+  PROCESSING
+  COMPLETE
+  MANUAL
+  ERROR
 }
 
 enum MealType {

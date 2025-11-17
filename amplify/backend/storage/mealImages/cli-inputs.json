@@ -1,0 +1,14 @@
+{
+  "resourceName": "mealImages",
+  "policyUUID": "e183bebf",
+  "bucketName": "mealimages",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ",
+    "DELETE"
+  ],
+  "groupAccess": {},
+  "triggerFunction": "MealImageProcessor"
+}

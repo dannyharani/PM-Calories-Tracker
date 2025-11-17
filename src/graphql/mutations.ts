@@ -106,8 +106,18 @@ export const createMeal = /* GraphQL */ `mutation CreateMeal(
     id
     date
     mealType
-    calories
     estimatedIngredients
+    mealName
+    calories
+    proteinGrams
+    carbsGrams
+    fatGrams
+    user_estimated_calories
+    user_estimated_proteinGrams
+    user_estimated_carbsGrams
+    user_estimated_fatGrams
+    photoKey
+    estimateConfidence
     user {
       id
       email
@@ -125,7 +135,7 @@ export const createMeal = /* GraphQL */ `mutation CreateMeal(
       updatedAt
       __typename
     }
-    dateTime
+    status
     createdAt
     updatedAt
     userMealsId
@@ -145,8 +155,18 @@ export const updateMeal = /* GraphQL */ `mutation UpdateMeal(
     id
     date
     mealType
-    calories
     estimatedIngredients
+    mealName
+    calories
+    proteinGrams
+    carbsGrams
+    fatGrams
+    user_estimated_calories
+    user_estimated_proteinGrams
+    user_estimated_carbsGrams
+    user_estimated_fatGrams
+    photoKey
+    estimateConfidence
     user {
       id
       email
@@ -164,7 +184,7 @@ export const updateMeal = /* GraphQL */ `mutation UpdateMeal(
       updatedAt
       __typename
     }
-    dateTime
+    status
     createdAt
     updatedAt
     userMealsId
@@ -184,8 +204,18 @@ export const deleteMeal = /* GraphQL */ `mutation DeleteMeal(
     id
     date
     mealType
-    calories
     estimatedIngredients
+    mealName
+    calories
+    proteinGrams
+    carbsGrams
+    fatGrams
+    user_estimated_calories
+    user_estimated_proteinGrams
+    user_estimated_carbsGrams
+    user_estimated_fatGrams
+    photoKey
+    estimateConfidence
     user {
       id
       email
@@ -203,7 +233,7 @@ export const deleteMeal = /* GraphQL */ `mutation DeleteMeal(
       updatedAt
       __typename
     }
-    dateTime
+    status
     createdAt
     updatedAt
     userMealsId

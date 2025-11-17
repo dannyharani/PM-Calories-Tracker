@@ -4,7 +4,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { signUp } from 'aws-amplify/auth';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Button, StyleSheet, TextInput, View } from 'react-native';
+import { Button, KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
@@ -21,7 +21,7 @@ const SignUp = () => {
       return;
     }
     try {
-      const { isSignUpComplete, nextStep } = await signUp({
+      const { nextStep } = await signUp({
         username: email,
         password,
         options: {
@@ -47,45 +47,53 @@ const SignUp = () => {
   const borderColor = useThemeColor({}, 'icon');
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText style={styles.title}>Create an Account</ThemedText>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Email"
-        style={[styles.input, { color: textColor, borderColor }]}
-        placeholderTextColor={borderColor}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
-        style={[styles.input, { color: textColor, borderColor }]}
-        placeholderTextColor={borderColor}
-        secureTextEntry
-      />
-      <TextInput
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        placeholder="Confirm Password"
-        style={[styles.input, { color: textColor, borderColor }]}
-        placeholderTextColor={borderColor}
-        secureTextEntry
-      />
-      {errorMsg ? <ThemedText style={styles.errorText}>{errorMsg}</ThemedText> : null}
-      <View style={styles.buttonContainer}>
-        <Button title="Sign Up" onPress={onSignUpPressed} />
-      </View>
-      <View style={styles.buttonContainer}>
-        <Button title="Have an account? Sign In" onPress={onSignInPressed} />
-      </View>
-    </ThemedView>
+    <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+    >
+        <ThemedView style={styles.container}>
+        <ThemedText style={styles.title}>Create an Account</ThemedText>
+        <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email"
+            style={[styles.input, { color: textColor, borderColor }]}
+            placeholderTextColor={borderColor}
+            keyboardType="email-address"
+            autoCapitalize="none"
+        />
+        <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Password"
+            style={[styles.input, { color: textColor, borderColor }]}
+            placeholderTextColor={borderColor}
+            secureTextEntry
+        />
+        <TextInput
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            placeholder="Confirm Password"
+            style={[styles.input, { color: textColor, borderColor }]}
+            placeholderTextColor={borderColor}
+            secureTextEntry
+        />
+        {errorMsg ? <ThemedText style={styles.errorText}>{errorMsg}</ThemedText> : null}
+        <View style={styles.buttonContainer}>
+            <Button title="Sign Up" onPress={onSignUpPressed} />
+        </View>
+        <View style={styles.buttonContainer}>
+            <Button title="Have an account? Sign In" onPress={onSignInPressed} />
+        </View>
+        </ThemedView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+    keyboardAvoidingView: {
+        flex: 1,
+    },
   container: {
     flex: 1,
     justifyContent: 'center',

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "api": {
+      "seg4105": [
+        "Query",
+        "Mutation",
+        "Subscription"
+      ]
+    }
+  },
+  "lambdaLayers": []
+}

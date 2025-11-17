@@ -7,7 +7,7 @@
             "UserPoolId"
           ],
           "category": "auth",
-          "resourceName": "seg4105d5970435"
+          "resourceName": "seg4105359f2e93"
         }
       ],
       "output": {
@@ -16,8 +16,11 @@
             {
               "authenticationType": "AMAZON_COGNITO_USER_POOLS",
               "userPoolConfig": {
-                "userPoolId": "authseg4105d5970435"
+                "userPoolId": "authseg4105359f2e93"
               }
+            },
+            {
+              "authenticationType": "AWS_IAM"
             }
           ],
           "defaultAuthentication": {
@@ -33,7 +36,7 @@
     }
   },
   "auth": {
-    "seg4105d5970435": {
+    "seg4105359f2e93": {
       "customAuth": false,
       "dependsOn": [],
       "frontendAuthConfig": {
@@ -58,6 +61,59 @@
       },
       "providerPlugin": "awscloudformation",
       "service": "Cognito"
+    }
+  },
+  "function": {
+    "MealImageProcessor": {
+      "build": true,
+      "dependsOn": [
+        {
+          "attributes": [
+            "GraphQLAPIIdOutput",
+            "GraphQLAPIEndpointOutput",
+            "GraphQLAPIKeyOutput"
+          ],
+          "category": "api",
+          "resourceName": "seg4105"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_MealImageProcessor_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "MealImageProcessor"
+        }
+      ]
+    },
+    "AMPLIFY_function_MealImageProcessor_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "MealImageProcessor"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "mealImages": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn",
+            "LambdaExecutionRole"
+          ],
+          "category": "function",
+          "resourceName": "MealImageProcessor"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "S3"
     }
   }
 }

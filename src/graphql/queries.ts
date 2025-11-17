@@ -65,8 +65,18 @@ export const getMeal = /* GraphQL */ `query GetMeal($id: ID!) {
     id
     date
     mealType
-    calories
     estimatedIngredients
+    mealName
+    calories
+    proteinGrams
+    carbsGrams
+    fatGrams
+    user_estimated_calories
+    user_estimated_proteinGrams
+    user_estimated_carbsGrams
+    user_estimated_fatGrams
+    photoKey
+    estimateConfidence
     user {
       id
       email
@@ -84,7 +94,7 @@ export const getMeal = /* GraphQL */ `query GetMeal($id: ID!) {
       updatedAt
       __typename
     }
-    dateTime
+    status
     createdAt
     updatedAt
     userMealsId
@@ -103,9 +113,19 @@ export const listMeals = /* GraphQL */ `query ListMeals(
       id
       date
       mealType
-      calories
       estimatedIngredients
-      dateTime
+      mealName
+      calories
+      proteinGrams
+      carbsGrams
+      fatGrams
+      user_estimated_calories
+      user_estimated_proteinGrams
+      user_estimated_carbsGrams
+      user_estimated_fatGrams
+      photoKey
+      estimateConfidence
+      status
       createdAt
       updatedAt
       userMealsId
