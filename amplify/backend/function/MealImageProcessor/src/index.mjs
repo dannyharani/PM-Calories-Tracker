@@ -112,7 +112,7 @@ async function callAIModel(bucket, key) {
         throw err;
     }
 
-    const systemPrompt = `You are a nutritional expert. Analyze the provided image of a meal and return ONLY a single, valid JSON object with the following structure:
+    const systemPrompt = `You are a nutritional expert. Analyze the provided image of a meal, making no assumption of portion size (the visible item *is* the portion), and return ONLY a single, valid JSON object with the following structure:
   {
     "mealName": <string>, // e.g. Cheeseburger
     "mealType": <"LUNCH" | "DINNER" | "BREAKFAST" | "SNACK">

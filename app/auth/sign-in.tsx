@@ -2,20 +2,20 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { fetchAuthSession, getCurrentUser, signIn } from 'aws-amplify/auth';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Button,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Button,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from 'react-native';
 
 const SignIn = () => {
@@ -25,6 +25,8 @@ const SignIn = () => {
   const [checkingSession, setCheckingSession] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const isGuestFlow = params.guest === 'true';
 
   useEffect(() => {
     let mounted = true;
@@ -90,6 +92,20 @@ const SignIn = () => {
 
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({}, 'icon');
+
+  if (isGuestFlow) {
+    return (
+      <ThemedView style={styles.container}>
+        <ThemedText style={styles.title}>Guest Mode</ThemedText>
+        <ThemedText style={{ textAlign: 'center', marginBottom: 20 }}>
+          Guest mode is currently under development and will be available in a future version. For now, please sign in or create an account to use the app.
+        </ThemedText>
+        <View style={styles.buttonContainer}>
+          <Button title="Back to Home" onPress={() => router.replace('/(tabs)')} />
+        </View>
+      </ThemedView>
+    );
+  }
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

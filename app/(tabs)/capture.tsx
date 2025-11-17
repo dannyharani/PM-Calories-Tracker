@@ -9,7 +9,7 @@ import { uploadData } from "aws-amplify/storage";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Button,
@@ -37,6 +37,19 @@ export default function CaptureTab() {
     const [photoUri, setPhotoUri] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isSignedIn, setIsSignedIn] = useState(false);
+
+    useEffect(() => {
+        const checkUser = async () => {
+            try {
+                await getCurrentUser();
+                setIsSignedIn(true);
+            } catch {
+                setIsSignedIn(false);
+            }
+        };
+        checkUser();
+    }, []);
 
     const onWebFile = (e: any) => {
         const file = e?.target?.files?.[0];
@@ -198,6 +211,22 @@ export default function CaptureTab() {
             setIsSaving(false);
         }
     };
+
+    if (!isSignedIn) {
+        return (
+            <ThemedView style={styles.container}>
+                <ThemedText type="title" style={{textAlign: 'center', marginBottom: 12}}>Account Required</ThemedText>
+                <ThemedText style={{textAlign: 'center', marginBottom: 20}}>
+                    Please sign in or create an account to capture meals. Guest mode will be available in a future version.
+                </ThemedText>
+                <View style={{width: '60%'}}>
+                    <Button title="Sign In" onPress={() => router.push('/auth/sign-in')} />
+                    <View style={{height: 12}} />
+                    <Button title="Sign Up" onPress={() => router.push('/auth/sign-up')} />
+                </View>
+            </ThemedView>
+        );
+    }
 
     return (
         <ThemedView style={styles.container}>

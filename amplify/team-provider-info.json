@@ -24,7 +24,7 @@
       "function": {
         "MealImageProcessor": {
           "deploymentBucketName": "amplify-seg4105-dev-51214-deployment",
-          "s3Key": "amplify-builds/MealImageProcessor-346141364366695a4749-build.zip"
+          "s3Key": "amplify-builds/MealImageProcessor-364f6b76396d33486358-build.zip"
         }
       }
     }

@@ -1023,10 +1023,9 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         borderWidth: 1,
         flexDirection: "row",
-        alignItems: "center",
+        justifyContent: "center",
     },
     datePillText: {
-        marginRight: 8,
         fontSize: 14,
         fontWeight: "600",
         textAlign: "center"
