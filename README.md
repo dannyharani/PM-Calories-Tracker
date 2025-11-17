@@ -26,7 +26,7 @@ We are currently in the Beta phase for Android! Your feedback is crucial to maki
 > **📱 Download the Beta**
 > The latest `.apk` file is available on the **[Releases Page](https://github.com/dannyharani/PM-Calories-Tracker/releases)**.
 >
-> *Please check the release notes for installation instructions and specific features we need you to test.*
+> *Please check the release notes for installation instructions.*
 
 ## 🧪 Beta Testing (iOS)
 
