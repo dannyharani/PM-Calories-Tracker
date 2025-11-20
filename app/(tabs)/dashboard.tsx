@@ -130,8 +130,8 @@ export default function DashboardScreen() {
                 } else {
                     setFirstName(
                         cognitoUser.username ||
-                            cognitoUser.attributes?.email ||
-                            null
+                        cognitoUser.attributes?.email ||
+                        null
                     );
                 }
 
@@ -156,7 +156,7 @@ export default function DashboardScreen() {
 
     useEffect(() => {
         fetchUser();
-        return () => {};
+        return () => { };
     }, [fetchUser]);
 
     // animate when expandedDaily changes
@@ -173,7 +173,7 @@ export default function DashboardScreen() {
     useFocusEffect(
         useCallback(() => {
             fetchUser();
-            return () => {};
+            return () => { };
         }, [fetchUser])
     );
 
@@ -354,28 +354,36 @@ export default function DashboardScreen() {
                     <ThemedText style={styles.mealTitle}>
                         {meal.mealType.slice(0, 1) + meal.mealType.toLowerCase().slice(1)}
                     </ThemedText>
-                    <ThemedText style={styles.mealSubtitle}>
-                        {meal.user_estimated_calories ?? meal.calories} Calories
-                    </ThemedText>
-                    
-                    {typeof (meal.user_estimated_proteinGrams ?? meal.proteinGrams) === "number" ? (
-                        <ThemedText
-                            style={styles.mealMacros}
-                        >{`Pro ${Math.round(meal.user_estimated_proteinGrams ?? meal.proteinGrams)}g · Carb ${Math.round(
-                            (meal.user_estimated_carbsGrams ?? meal.carbsGrams) || 0
-                        )}g · Fat ${Math.round(
-                            (meal.user_estimated_fatGrams ?? meal.fatGrams) || 0
-                        )}g`}</ThemedText>
-                    ) : null}
+                    {meal.status === 'ERROR' ? (
+                        <ThemedText style={[styles.mealSubtitle, { color: '#d32f2f', fontWeight: '500' }]}>
+                            Analysis failed • Tap to fix
+                        </ThemedText>
+                    ) : (
+                        <>
+                            <ThemedText style={styles.mealSubtitle}>
+                                {meal.user_estimated_calories ?? meal.calories} Calories
+                            </ThemedText>
+
+                            {typeof (meal.user_estimated_proteinGrams ?? meal.proteinGrams) === "number" ? (
+                                <ThemedText
+                                    style={styles.mealMacros}
+                                >{`Pro ${Math.round(meal.user_estimated_proteinGrams ?? meal.proteinGrams)}g · Carb ${Math.round(
+                                    (meal.user_estimated_carbsGrams ?? meal.carbsGrams) || 0
+                                )}g · Fat ${Math.round(
+                                    (meal.user_estimated_fatGrams ?? meal.fatGrams) || 0
+                                )}g`}</ThemedText>
+                            ) : null}
+                        </>
+                    )}
                 </View>
 
-                <View style={{alignItems: 'flex-end'}}>
+                <View style={{ alignItems: 'flex-end' }}>
                     <IconSymbol
                         name="chevron.right"
                         size={18}
                         color={iconColor as string}
                     />
-                    <ThemedText style={[styles.mealTime, {marginTop: 'auto'}]}>{timeLabel}</ThemedText>
+                    <ThemedText style={[styles.mealTime, { marginTop: 'auto' }]}>{timeLabel}</ThemedText>
                 </View>
             </TouchableOpacity>
         );
@@ -444,7 +452,7 @@ export default function DashboardScreen() {
                     onPress={() => setShowUserMenu(false)}
                 />
             ) : null}
-            
+
             <View style={styles.headerRow}>
                 <ThemedText type="title">Dashboard</ThemedText>
                 <TouchableOpacity
@@ -519,7 +527,7 @@ export default function DashboardScreen() {
                     />
                 ) : null}
             </View>
-            
+
             <ScrollView keyboardShouldPersistTaps="handled">
                 <View
                     style={[
@@ -573,18 +581,18 @@ export default function DashboardScreen() {
                                     {
                                         width: calorieGoal
                                             ? `${Math.min(
-                                                  (todayCalories /
-                                                      Math.max(
-                                                          1,
-                                                          calorieGoal
-                                                      )) *
-                                                      100,
-                                                  100
-                                              )}%`
+                                                (todayCalories /
+                                                    Math.max(
+                                                        1,
+                                                        calorieGoal
+                                                    )) *
+                                                100,
+                                                100
+                                            )}%`
                                             : "0%",
                                         backgroundColor:
                                             calorieGoal &&
-                                            todayCalories > calorieGoal
+                                                todayCalories > calorieGoal
                                                 ? "#e74c3c"
                                                 : "#4da6ff",
                                     },
@@ -600,28 +608,26 @@ export default function DashboardScreen() {
                                     style={{
                                         color:
                                             calorieGoal &&
-                                            Math.min(
-                                                (todayCalories /
-                                                    Math.max(1, calorieGoal)) *
+                                                Math.min(
+                                                    (todayCalories /
+                                                        Math.max(1, calorieGoal)) *
                                                     100,
-                                                100
-                                            ) > 30
+                                                    100
+                                                ) > 30
                                                 ? "#fff"
                                                 : textColor,
                                         fontWeight: "600",
                                         fontSize: 12,
                                     }}
                                 >
-                                    {`Goal: ${
-                                        calorieGoal ?? "?"
-                                    } cal • Remaining: ${
-                                        calorieGoal
+                                    {`Goal: ${calorieGoal ?? "?"
+                                        } cal • Remaining: ${calorieGoal
                                             ? Math.max(
-                                                  0,
-                                                  calorieGoal - todayCalories
-                                              ) + " cal"
+                                                0,
+                                                calorieGoal - todayCalories
+                                            ) + " cal"
                                             : "?"
-                                    } `}
+                                        } `}
                                 </ThemedText>
                             </View>
                         </View>
@@ -682,9 +688,9 @@ export default function DashboardScreen() {
                                     const pct =
                                         g && g > 0
                                             ? Math.min(
-                                                  ((t ?? 0) / g) * 100,
-                                                  100
-                                              )
+                                                ((t ?? 0) / g) * 100,
+                                                100
+                                            )
                                             : 0;
                                     const over = g ? (t ?? 0) > g : false;
                                     return (
@@ -728,18 +734,16 @@ export default function DashboardScreen() {
                                                             fontSize: 12,
                                                         }}
                                                     >
-                                                        {`Goal: ${g ?? "?"}${
-                                                            m.unit
-                                                        } • Remaining: ${
-                                                            g
+                                                        {`Goal: ${g ?? "?"}${m.unit
+                                                            } • Remaining: ${g
                                                                 ? Math.max(
-                                                                      0,
-                                                                      (g as number) -
-                                                                          (t ??
-                                                                              0)
-                                                                  ) + m.unit
+                                                                    0,
+                                                                    (g as number) -
+                                                                    (t ??
+                                                                        0)
+                                                                ) + m.unit
                                                                 : "?"
-                                                        } `}
+                                                            } `}
                                                     </ThemedText>
                                                 </View>
                                             </View>
@@ -800,9 +804,9 @@ export default function DashboardScreen() {
                                     const pct =
                                         g && g > 0
                                             ? Math.min(
-                                                  ((t ?? 0) / g) * 100,
-                                                  100
-                                              )
+                                                ((t ?? 0) / g) * 100,
+                                                100
+                                            )
                                             : 0;
                                     const over = g ? (t ?? 0) > g : false;
                                     return (
@@ -846,18 +850,16 @@ export default function DashboardScreen() {
                                                             fontSize: 12,
                                                         }}
                                                     >
-                                                        {`Goal: ${g ?? "?"}${
-                                                            m.unit
-                                                        } • Remaining: ${
-                                                            g
+                                                        {`Goal: ${g ?? "?"}${m.unit
+                                                            } • Remaining: ${g
                                                                 ? Math.max(
-                                                                      0,
-                                                                      (g as number) -
-                                                                          (t ??
-                                                                              0)
-                                                                  ) + m.unit
+                                                                    0,
+                                                                    (g as number) -
+                                                                    (t ??
+                                                                        0)
+                                                                ) + m.unit
                                                                 : "?"
-                                                        } `}
+                                                            } `}
                                                     </ThemedText>
                                                 </View>
                                             </View>
@@ -868,27 +870,27 @@ export default function DashboardScreen() {
                         </View>
                     </Animated.View>
                 </View>
-            {mealsToday && mealsToday.length > 0 ? (
-                <View style={{ marginTop: 12 }}>
-                    {mealsToday.map((m: any, idx: number) => (
-                        <React.Fragment key={m.id}>
-                            <MealRow
-                                meal={m}
-                                onPress={() =>
-                                    router.push({
-                                      pathname: "/meal/[id]",
-                                      params: { id: m.id },
-                                    })
-                                  }
-                            />
-                        </React.Fragment>
-                    ))}
-                </View>
-            ) : null}
+                {mealsToday && mealsToday.length > 0 ? (
+                    <View style={{ marginTop: 12 }}>
+                        {mealsToday.map((m: any, idx: number) => (
+                            <React.Fragment key={m.id}>
+                                <MealRow
+                                    meal={m}
+                                    onPress={() =>
+                                        router.push({
+                                            pathname: "/meal/[id]",
+                                            params: { id: m.id },
+                                        })
+                                    }
+                                />
+                            </React.Fragment>
+                        ))}
+                    </View>
+                ) : null}
 
-            {statusMessage ? (
-              <ThemedText style={styles.status}>{statusMessage}</ThemedText>
-            ) : null}
+                {statusMessage ? (
+                    <ThemedText style={styles.status}>{statusMessage}</ThemedText>
+                ) : null}
             </ScrollView>
 
 

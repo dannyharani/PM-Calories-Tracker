@@ -85,7 +85,9 @@ export const handler = async (event) => {
                 input: {
                     id: mealId,
                     ...nutritionalData,
-                    status: "COMPLETE", // Mark as complete after successful AI analysis
+                    // status is now returned by the AI model (COMPLETE or ERROR)
+                    // if for some reason it's missing, default to COMPLETE if we have data, or ERROR if not
+                    status: nutritionalData.status || "COMPLETE",
                 },
             };
 
@@ -118,6 +120,7 @@ export const handler = async (event) => {
  * @param {string} bucket - S3 bucket name containing the meal image
  * @param {string} key - S3 object key (path) to the meal image
  * @returns {Promise<Object>} Nutritional data object containing:
+ *   - status: string - "COMPLETE" or "ERROR"
  *   - mealName: string - Name of the meal (e.g., "Cheeseburger")
  *   - mealType: string - Type of meal (BREAKFAST, LUNCH, DINNER, SNACK)
  *   - calories: number - Estimated calorie count
@@ -164,14 +167,15 @@ async function callAIModel(bucket, key) {
     // Important: Assumes visible portion IS the full portion (no assumptions about serving size)
     const systemPrompt = `You are a nutritional expert. Analyze the provided image of a meal, making no assumption of portion size (the visible item *is* the portion), and return ONLY a single, valid JSON object with the following structure:
   {
-    "mealName": <string>, // e.g. Cheeseburger
-    "mealType": <"LUNCH" | "DINNER" | "BREAKFAST" | "SNACK">
-    "calories": <number>,
-    "proteinGrams": <number>,
-    "carbsGrams": <number>,
-    "fatGrams": <number>,
-    "estimatedIngredients": [<string>], // a list of the ingredient names
-    "estimateConfidence": <number from 0.0 to 1.0>
+    "status": <"COMPLETE" | "ERROR">, // "ERROR" if the image is not a meal or cannot be analyzed. "COMPLETE" if analysis is successful.
+    "mealName": <string>, // e.g. Cheeseburger (required if status is COMPLETE)
+    "mealType": <"LUNCH" | "DINNER" | "BREAKFAST" | "SNACK"> // (required if status is COMPLETE)
+    "calories": <number>, // (required if status is COMPLETE)
+    "proteinGrams": <number>, // (required if status is COMPLETE)
+    "carbsGrams": <number>, // (required if status is COMPLETE)
+    "fatGrams": <number>, // (required if status is COMPLETE)
+    "estimatedIngredients": [<string>], // a list of the ingredient names (required if status is COMPLETE)
+    "estimateConfidence": <number from 0.0 to 1.0> // (required if status is COMPLETE)
   }
   Do not add any text, explanations, or markdown formatting (like \`\`\`json) before or after the JSON object.`;
 
@@ -224,13 +228,14 @@ async function callAIModel(bucket, key) {
     const aiResponseText = parsedResponseBody.content[0].text;
     const nutritionalData = JSON.parse(aiResponseText);
 
-    // Validate that the AI returned valid nutritional data with at least calories
-    if (typeof nutritionalData.calories !== "number") {
-        throw new Error("AI response was not valid JSON with calories.");
+    // Validate that the AI returned valid nutritional data with at least calories if status is COMPLETE
+    if (nutritionalData.status === "COMPLETE" && typeof nutritionalData.calories !== "number") {
+        throw new Error("AI response was COMPLETE but missing calories.");
     }
 
     // Return only the fields we need for the meal record
     return {
+        status: nutritionalData.status || "COMPLETE",
         mealName: nutritionalData.mealName,
         mealType: nutritionalData.mealType,
         calories: nutritionalData.calories,

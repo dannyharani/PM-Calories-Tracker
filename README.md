@@ -44,10 +44,51 @@ Please submit a **[New Issue](https://github.com/dannyharani/PM-Calories-Tracker
 Ready to contribute? Follow the steps below to get the project running locally.
 
 ### Prerequisites
-Before you begin, ensure you have the following installed:
-* **Node.js** (LTS version recommended)
-* **Expo CLI**
-* **AWS Amplify CLI**
+Before you begin, ensure you have the following installed and configured. Where useful, example commands are provided for macOS / Linux (bash) and Windows PowerShell.
+
+* **Node.js (LTS recommended)**
+	- Install: download the installer from the official website and follow the platform instructions:
+		- https://nodejs.org/
+	- Optional (macOS/Linux): use nvm to manage Node versions: https://github.com/nvm-sh/nvm
+	- Optional (Windows): use nvm-windows: https://github.com/coreybutler/nvm-windows
+	- Verify installation:
+		```bash
+		node -v
+		npm -v
+		```
+
+* **Expo CLI** (for development and the Metro bundler)
+	- Install globally via npm (or use `npx`/`corepack` if you prefer not to install globally):
+		```bash
+		npm install -g expo-cli
+		# or run locally using npx
+		npx expo start
+		```
+	- Docs: https://docs.expo.dev/
+	- Verify:
+		```bash
+		expo --version
+		```
+
+* **AWS Amplify CLI** (to pull the backend config and deploy when needed)
+	- Install globally via npm:
+		```bash
+		npm install -g @aws-amplify/cli
+		```
+	- After installation, configure Amplify with your AWS account (this opens a browser to sign in and will guide you to create an IAM user):
+		```bash
+		amplify configure
+		```
+	- Docs & guide: https://docs.amplify.aws/cli
+	- Verify:
+		```bash
+		amplify --version
+		```
+
+Notes:
+- You will need an AWS account to run `amplify pull` (the app uses Amplify-managed backend resources). If you don't have one, create one at https://aws.amazon.com/.
+- On Windows, run the PowerShell prompt as Administrator for global npm installs if you run into permission issues, or use a Node version manager like nvm-windows.
+- If you prefer not to install global CLIs, you can use `npx expo start` and `npx @aws-amplify/cli <command>` to run them via npx.
 
 ### 1. Clone the Repository
 Get the code to your local machine:
@@ -79,6 +120,11 @@ Once the dependencies are installed and the backend is connected, start the Expo
 
 ```bash
 npm start
+
+# Or try:
+npx expo start --dev-client
 ```
 
 This will launch the Expo Metro bundler. Simply scan the **QR code** using the **Expo Go** app on your physical device (or run on an emulator) to start the app.
+
+*Note: for a quick check without the need of an emulator or external device, consider using the web option by pressing `w` on the expo terminal. Keep in mind not all options may be compatible for web. **Although photo upload will seem to work on web, it will not.***

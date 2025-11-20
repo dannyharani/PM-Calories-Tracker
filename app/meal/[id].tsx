@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { getGraphQLClient } from '@/src/amplifyClient';
+import { StatusType } from '@/src/API';
 import { deleteMeal, updateMeal } from '@/src/graphql/mutations';
 import { getMeal as getMealQuery, getUser as getUserQuery } from '@/src/graphql/queries';
 import { getUrl } from 'aws-amplify/storage';
@@ -210,7 +211,7 @@ export default function MealDetail() {
       const client = await getGraphQLClient();
       await client.graphql({
         query: updateMeal,
-        variables: { input },
+        variables: { input: { ...input, status: StatusType.COMPLETE } },
         authMode: 'userPool',
       });
       // Update local meal state to reflect changes immediately (optimistic update)
@@ -315,7 +316,22 @@ export default function MealDetail() {
               </View>
             )}
 
-            {meal.status !== 'PROCESSING' && (
+            {meal.status === 'ERROR' && (
+              <View style={[styles.card, { backgroundColor: '#ffebee', borderColor: '#ef5350', alignItems: 'center', padding: 20, marginBottom: 12 }]}>
+                <IconSymbol name="exclamationmark.circle.fill" size={48} color="#c62828" />
+                <ThemedText style={{ marginTop: 12, fontWeight: '600', color: '#c62828' }}>Analysis Failed</ThemedText>
+                <ThemedText style={{ marginTop: 4, textAlign: 'center', fontSize: 12, color: '#c62828', marginBottom: 16 }}>
+                  We couldn't analyze this meal. Please enter the nutrition details manually.
+                </ThemedText>
+                <Button
+                  title="Enter Details Manually"
+                  color="#c62828"
+                  onPress={() => setIsEditing(true)}
+                />
+              </View>
+            )}
+
+            {meal.status !== 'PROCESSING' && meal.status !== 'ERROR' && (
               <>
                 <View style={[styles.card, { backgroundColor: cardBg, borderColor: border }]}>
                   <View style={styles.cardHeader}>
@@ -352,7 +368,7 @@ export default function MealDetail() {
 
                 </View>
 
-                {isEditing && (
+                {(isEditing || meal.status === 'ERROR') && (
                   <View style={[styles.card, { backgroundColor: cardBg, borderColor: border, marginTop: 12 }]}>
                     <ThemedText type="subtitle" style={{ marginBottom: 8 }}>Edit Nutrition</ThemedText>
                     <View style={styles.editRow}>
