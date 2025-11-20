@@ -5,19 +5,29 @@ import { fetchAuthSession, getCurrentUser, signIn } from 'aws-amplify/auth';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Button,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Button,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 
+/**
+ * Sign-in screen component for user authentication.
+ * 
+ * Features:
+ * - Email/password authentication via AWS Cognito
+ * - Automatic redirect if already signed in
+ * - User-friendly error message mapping
+ * - Handles unconfirmed email flow
+ * - Guest mode placeholder (future feature)
+ */
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,22 +38,30 @@ const SignIn = () => {
   const params = useLocalSearchParams();
   const isGuestFlow = params.guest === 'true';
 
+  // Check if user is already signed in on component mount
+  // If signed in, redirect to dashboard automatically
   useEffect(() => {
     let mounted = true;
     const check = async () => {
       try {
         await getCurrentUser();
+        // User is already authenticated, redirect to dashboard
         if (mounted) router.replace('/(tabs)/dashboard');
       } catch {
-        // remain on sign-in
+        // User not signed in, remain on sign-in page
       } finally {
         mounted && setCheckingSession(false);
       }
     };
     check();
+    // Cleanup to prevent state updates after unmount
     return () => { mounted = false; };
   }, [router]);
 
+  /**
+   * Maps AWS Cognito error codes to user-friendly error messages.
+   * Provides clear, actionable feedback for common authentication errors.
+   */
   const mapAuthError = (error: any): string => {
     const code = error?.code || error?.name;
     const raw = (error?.message || '').toString();
@@ -55,6 +73,17 @@ const SignIn = () => {
     return raw || 'Failed to sign in.';
   };
 
+  /**
+   * Handles sign-in form submission.
+   * 
+   * Flow:
+   * 1. Validate email and password are provided
+   * 2. Attempt sign-in via AWS Cognito
+   * 3. Fetch auth session to ensure credentials are valid
+   * 4. Redirect to dashboard on success
+   * 5. Handle special case: unconfirmed email (redirect to confirmation)
+   * 6. Display user-friendly error messages for other failures
+   */
   const onSignInPressed = async () => {
     setErrorMsg('');
     setIsSigningIn(true);
@@ -64,19 +93,24 @@ const SignIn = () => {
       return;
     }
     try {
+      // Sign in with email (as username) and password
       await signIn({ username: email.trim().toLowerCase(), password });
       try {
+        // Fetch session to ensure authentication is complete
         await fetchAuthSession();
       } catch (sessErr) {
         console.warn('Session fetch failed:', sessErr);
       }
+      // Success - redirect to dashboard
       router.replace('/(tabs)/dashboard');
     } catch (error: any) {
       console.error('Sign in error', error);
       const code = error?.code || error?.name;
+      // Special handling for unconfirmed email - redirect to confirmation page
       if (code === 'UserNotConfirmedException') {
         router.push({ pathname: '/auth/confirm-email', params: { email, password } });
       } else {
+        // Map error to user-friendly message
         const mapped = mapAuthError(error);
         const fallback = (error?.message && String(error.message)) || JSON.stringify(error);
         setErrorMsg(mapped || fallback || 'Failed to sign in.');

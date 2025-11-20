@@ -5,21 +5,35 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Button, StyleSheet, View } from 'react-native';
 
+/**
+ * Home screen component - Landing page for the AI Calorie Estimator app.
+ * Displays different options based on authentication status.
+ * 
+ * Features:
+ * - Checks authentication status on mount
+ * - Shows sign-in/sign-up buttons for unauthenticated users
+ * - Shows dashboard link for authenticated users
+ * - Provides guest mode option (currently placeholder)
+ */
 export default function HomeScreen() {
   const router = useRouter();
   const [isSignedIn, setIsSignedIn] = useState(false);
 
+  // Check authentication status when component mounts
   useEffect(() => {
     let mounted = true;
     const check = async () => {
       try {
         const user: any = await getCurrentUser();
+        // Only update state if component is still mounted (prevents memory leaks)
         if (mounted && user) setIsSignedIn(true);
       } catch {
+        // User is not signed in
         if (mounted) setIsSignedIn(false);
       }
     };
     check();
+    // Cleanup function to prevent state updates after unmount
     return () => { mounted = false; };
   }, []);
 
@@ -32,6 +46,7 @@ export default function HomeScreen() {
       <View style={styles.buttonContainer}>
         {!isSignedIn ? (
           <>
+            {/* Show authentication options for unauthenticated users */}
             <View style={styles.buttonWrapper}>
               <Button title="Sign In" onPress={() => router.push('/auth/sign-in')} />
             </View>
@@ -40,10 +55,12 @@ export default function HomeScreen() {
             </View>
           </>
         ) : (
+          /* Show dashboard link for authenticated users */
           <View style={styles.buttonWrapper}>
             <Button title="Go to Dashboard" onPress={() => router.push('/dashboard')} />
           </View>
         )}
+        {/* Guest mode - currently shows placeholder message */}
         <View style={styles.buttonWrapper}>
           <Button title="Continue as Guest" onPress={() => router.push('/auth/sign-in?guest=true')} />
         </View>

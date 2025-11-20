@@ -6,6 +6,15 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Button, KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 
+/**
+ * Sign-up screen component for new user registration.
+ * 
+ * Features:
+ * - Email/password registration via AWS Cognito
+ * - Password confirmation validation
+ * - Automatic redirect to email confirmation page
+ * - Error handling with user-friendly messages
+ */
 const SignUp = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,8 +23,18 @@ const SignUp = () => {
 
   const [errorMsg, setErrorMsg] = useState('');
 
+  /**
+   * Handles sign-up form submission.
+   * 
+   * Flow:
+   * 1. Validate password matches confirmation
+   * 2. Create account via AWS Cognito
+   * 3. Redirect to email confirmation page with credentials
+   *    (credentials passed to enable auto-sign-in after confirmation)
+   */
   const onSignUpPressed = async () => {
     setErrorMsg('');
+    // Validate passwords match before attempting registration
     if (password !== confirmPassword) {
       setErrorMsg("Passwords don't match");
       return;
@@ -30,8 +49,9 @@ const SignUp = () => {
           },
         },
       });
+      // After successful registration, user must confirm their email
       if (nextStep?.signUpStep === 'CONFIRM_SIGN_UP') {
-        // pass the password so we can auto-sign-in after confirmation
+        // Pass password to enable auto-sign-in after email confirmation
         router.push({ pathname: '/auth/confirm-email', params: { email, password } });
       }
     } catch (error: any) {
@@ -48,52 +68,52 @@ const SignUp = () => {
 
   return (
     <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingView}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.keyboardAvoidingView}
     >
-        <ThemedView style={styles.container}>
+      <ThemedView style={styles.container}>
         <ThemedText style={styles.title}>Create an Account</ThemedText>
         <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="Email"
-            style={[styles.input, { color: textColor, borderColor }]}
-            placeholderTextColor={borderColor}
-            keyboardType="email-address"
-            autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+          placeholder="Email"
+          style={[styles.input, { color: textColor, borderColor }]}
+          placeholderTextColor={borderColor}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
         <TextInput
-            value={password}
-            onChangeText={setPassword}
-            placeholder="Password"
-            style={[styles.input, { color: textColor, borderColor }]}
-            placeholderTextColor={borderColor}
-            secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Password"
+          style={[styles.input, { color: textColor, borderColor }]}
+          placeholderTextColor={borderColor}
+          secureTextEntry
         />
         <TextInput
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm Password"
-            style={[styles.input, { color: textColor, borderColor }]}
-            placeholderTextColor={borderColor}
-            secureTextEntry
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          placeholder="Confirm Password"
+          style={[styles.input, { color: textColor, borderColor }]}
+          placeholderTextColor={borderColor}
+          secureTextEntry
         />
         {errorMsg ? <ThemedText style={styles.errorText}>{errorMsg}</ThemedText> : null}
         <View style={styles.buttonContainer}>
-            <Button title="Sign Up" onPress={onSignUpPressed} />
+          <Button title="Sign Up" onPress={onSignUpPressed} />
         </View>
         <View style={styles.buttonContainer}>
-            <Button title="Have an account? Sign In" onPress={onSignInPressed} />
+          <Button title="Have an account? Sign In" onPress={onSignInPressed} />
         </View>
-        </ThemedView>
+      </ThemedView>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-    keyboardAvoidingView: {
-        flex: 1,
-    },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     justifyContent: 'center',

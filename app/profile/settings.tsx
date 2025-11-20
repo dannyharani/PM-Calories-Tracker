@@ -3,8 +3,8 @@ import { ThemedView } from "@/components/themed-view";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { getGraphQLClient } from "@/src/amplifyClient";
 import {
-  createUser as createUserMutation,
-  updateUser as updateUserMutation,
+    createUser as createUserMutation,
+    updateUser as updateUserMutation,
 } from "@/src/graphql/mutations";
 import { getUser as getUserQuery } from "@/src/graphql/queries";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -12,20 +12,26 @@ import { fetchUserAttributes, getCurrentUser } from "aws-amplify/auth";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Button,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
+    Button,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
 } from "react-native";
 
-// Utility: compute age from DOB (YYYY-MM-DD)
+/**
+ * Calculates age from date of birth string (YYYY-MM-DD format).
+ * Accounts for whether birthday has occurred this year.
+ * 
+ * @param dob - Date of birth in YYYY-MM-DD format
+ * @returns Age in years, or null if invalid date
+ */
 function dobToAge(dob?: string | null): number | null {
     if (!dob) return null;
     const parts = dob.split("-");
@@ -38,10 +44,27 @@ function dobToAge(dob?: string | null): number | null {
     const now = new Date();
     let age = now.getFullYear() - d.getFullYear();
     const m = now.getMonth() - d.getMonth();
+    // Adjust age if birthday hasn't occurred yet this year
     if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
     return age;
 }
 
+/**
+ * Profile settings screen component - Allows users to manage their profile and nutrition goals.
+ * 
+ * Features:
+ * - Personal information (name, gender, height, weight, date of birth)
+ * - Fitness goal selection (maintain/lose/gain weight, build muscle, lose fat)
+ * - Automatic calorie goal calculation using Mifflin-St Jeor equation
+ * - BMR (Basal Metabolic Rate) calculation with activity multiplier
+ * - Goal-based calorie adjustments (+/- 250-500 calories)
+ * - Creates or updates user profile in database
+ * 
+ * Calorie Calculation:
+ * - BMR = 10 * weight(kg) + 6.25 * height(cm) - 5 * age + gender_offset
+ * - Maintenance = BMR * 1.2 (sedentary activity level)
+ * - Adjusted based on goal (e.g., -500 for weight loss, +500 for weight gain)
+ */
 export default function ProfileSettings() {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -67,7 +90,22 @@ export default function ProfileSettings() {
     const textColor = useThemeColor({}, "text");
     const borderColor = useThemeColor({}, "icon");
 
-    // Recalculate calorie goal when inputs or goal change
+    /**
+     * Recalculates calorie goal whenever user inputs change.
+     * 
+     * Uses Mifflin-St Jeor equation for BMR:
+     * - Men: BMR = 10 * weight + 6.25 * height - 5 * age + 5
+     * - Women: BMR = 10 * weight + 6.25 * height - 5 * age - 161
+     * 
+     * Maintenance calories = BMR * 1.2 (sedentary activity level)
+     * 
+     * Goal adjustments:
+     * - LOSE_WEIGHT: -500 calories (1 lb/week loss)
+     * - GAIN_WEIGHT: +500 calories (1 lb/week gain)
+     * - BUILD_MUSCLE: +250 calories (lean bulk)
+     * - LOSE_FAT: -300 calories (moderate deficit)
+     * - MAINTAIN_WEIGHT: no adjustment
+     */
     useEffect(() => {
         const w = parseFloat(weight);
         const h = parseFloat(height);
@@ -76,11 +114,16 @@ export default function ProfileSettings() {
             setCalorieGoal(null);
             return;
         }
+        // Calculate BMR using Mifflin-St Jeor equation
         let bmr = 10 * w + 6.25 * h - 5 * age;
         if (gender?.toLowerCase() === "male" || gender?.toLowerCase() === "m")
-            bmr += 5;
-        else bmr -= 161;
-        const maintenance = Math.round(bmr * 1.2);
+            bmr += 5; // Male adjustment
+        else bmr -= 161; // Female adjustment
+
+        // Calculate maintenance calories (BMR * activity multiplier)
+        const maintenance = Math.round(bmr * 1.2); // 1.2 = sedentary
+
+        // Adjust calories based on fitness goal
         switch (goal) {
             case "LOSE_WEIGHT":
                 setCalorieGoal(maintenance - 500);
@@ -99,6 +142,7 @@ export default function ProfileSettings() {
         }
     }, [weight, height, dob, gender, goal]);
 
+    // Load existing user profile on mount, or prefill from Cognito attributes
     useEffect(() => {
         let mounted = true;
         (async () => {
@@ -109,6 +153,8 @@ export default function ProfileSettings() {
                     (current as any)?.attributes?.sub ||
                     (current as any)?.username;
                 if (!id) throw new Error("No authenticated user");
+
+                // Try to fetch existing user profile from database
                 const client = await getGraphQLClient();
                 const resp: any = await client.graphql({
                     query: getUserQuery,
@@ -117,6 +163,7 @@ export default function ProfileSettings() {
                 });
                 const u = resp?.data?.getUser;
                 if (u && mounted) {
+                    // Profile exists - populate form with existing data
                     setIsExistingUser(true);
                     setFirstName(u.firstName || "");
                     setLastName(u.lastName || "");
@@ -129,7 +176,7 @@ export default function ProfileSettings() {
                     if (typeof u.calorieGoal === "number")
                         setCalorieGoal(u.calorieGoal);
                 } else if (!u) {
-                    // Attempt to prefill from attributes if profile missing
+                    // No profile exists - prefill from Cognito attributes if available
                     const attrs = await fetchUserAttributes();
                     setFirstName(attrs?.name || "");
                     setIsExistingUser(false);
@@ -145,7 +192,7 @@ export default function ProfileSettings() {
         };
     }, []);
 
-    // Keep selectedDate in sync when dob changes (in case it's changed programmatically)
+    // Keep selectedDate in sync when dob changes programmatically
     useEffect(() => {
         if (dob) {
             const d = parseDobToDate(dob);
@@ -153,6 +200,17 @@ export default function ProfileSettings() {
         }
     }, [dob]);
 
+    /**
+     * Saves profile changes to the database.
+     * Creates new profile if none exists, otherwise updates existing profile.
+     * 
+     * Flow:
+     * 1. Get current user ID
+     * 2. Prepare input with all profile fields
+     * 3. Calculate age from date of birth
+     * 4. Use createUser or updateUser mutation based on isExistingUser flag
+     * 5. On success, show confirmation and navigate back
+     */
     const onSave = async () => {
         setErrorMsg("");
         setStatusMsg("");
@@ -164,6 +222,8 @@ export default function ProfileSettings() {
                 (user as any)?.attributes?.sub ||
                 (user as any)?.username;
             if (!id) throw new Error("No authenticated user");
+
+            // Prepare profile data
             const input: any = {
                 id,
                 firstName: firstName || null,
@@ -172,20 +232,21 @@ export default function ProfileSettings() {
                 height: height ? parseFloat(height) : null,
                 weight: weight ? parseFloat(weight) : null,
                 dob: dob || null,
-                age: dobToAge(dob),
+                age: dobToAge(dob), // Calculate age from DOB
                 goal: goal || null,
                 calorieGoal: calorieGoal || null,
             };
             const client = await getGraphQLClient();
+            // Use create or update mutation based on whether profile exists
             const mutationToUse = isExistingUser
                 ? updateUserMutation
                 : createUserMutation;
-            // include email on create to satisfy schema
+            // Include email on create to satisfy schema requirements
             if (!isExistingUser) {
                 try {
                     const attrs = await fetchUserAttributes();
                     (input as any).email = attrs?.email || null;
-                } catch {}
+                } catch { }
             }
             const resp: any = await client.graphql({
                 query: mutationToUse,
@@ -195,7 +256,7 @@ export default function ProfileSettings() {
             if (resp.errors)
                 throw new Error(resp.errors[0]?.message || "Update failed");
             setStatusMsg("Profile updated");
-            // Give quick feedback then navigate back
+            // Give quick feedback then navigate back to previous screen
             setTimeout(() => router.back(), 600);
         } catch (e: any) {
             setErrorMsg(e?.message || "Failed to save changes");

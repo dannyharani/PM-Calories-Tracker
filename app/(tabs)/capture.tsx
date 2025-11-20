@@ -26,8 +26,27 @@ import {
     isStorageConfigured,
 } from "../../src/utils/storage";
 
+/**
+ * Capture tab component - Allows users to capture or upload meal photos for AI analysis.
+ * 
+ * Features:
+ * - Take photo with camera (native) or select from file system (web)
+ * - Upload from photo library (native) or file picker (web)
+ * - Manual meal entry without photo
+ * - Meal type selection (breakfast, lunch, dinner, snack)
+ * - Automatic AI analysis after upload
+ * - Real-time processing status updates
+ * 
+ * Flow:
+ * 1. User selects capture method (camera, upload, or manual)
+ * 2. Image is previewed and meal type is selected
+ * 3. On save, meal record is created in database
+ * 4. Photo is uploaded to S3 (triggers Lambda for AI analysis)
+ * 5. User is redirected to meal detail page
+ */
 export default function CaptureTab() {
     const router = useRouter();
+    // UI state: "initial" shows action buttons, "picked" shows preview and form
     const [mode, setMode] = useState<"initial" | "picked">("initial");
     const [previewUri, setPreviewUri] = useState<string | null>(null);
     const textColor = useThemeColor({}, "text");
@@ -39,6 +58,7 @@ export default function CaptureTab() {
     const [error, setError] = useState<string | null>(null);
     const [isSignedIn, setIsSignedIn] = useState(false);
 
+    // Check authentication status on mount - capture requires sign-in
     useEffect(() => {
         const checkUser = async () => {
             try {
@@ -51,20 +71,33 @@ export default function CaptureTab() {
         checkUser();
     }, []);
 
+    /**
+     * Handles file selection on web platform.
+     * Creates a blob URL for preview and stores for upload.
+     */
     const onWebFile = (e: any) => {
         const file = e?.target?.files?.[0];
         if (!file) return;
+        // Create temporary URL for image preview
         const url = URL.createObjectURL(file);
         setPreviewUri(url);
         setPhotoUri(url);
-        setMode("picked");
+        setMode("picked"); // Switch to review mode
     };
 
+    /**
+     * Launches the device camera to take a photo (native platforms only).
+     * Requests camera permissions if not already granted.
+     * Quality is reduced to 0.6 to optimize upload size.
+     */
     const pickFromCamera = async () => {
         try {
+            // Request camera permissions
             const { status } =
                 await ImagePicker.requestCameraPermissionsAsync();
             if (status !== "granted") return;
+
+            // Launch camera with reduced quality for faster uploads
             const result = await ImagePicker.launchCameraAsync({
                 quality: 0.6,
             });
@@ -80,11 +113,18 @@ export default function CaptureTab() {
         }
     };
 
+    /**
+     * Opens the photo library to select an existing image (native platforms only).
+     * Requests media library permissions if not already granted.
+     */
     const pickFromLibrary = async () => {
         try {
+            // Request photo library permissions
             const { status } =
                 await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== "granted") return;
+
+            // Launch image picker with reduced quality
             const result = await ImagePicker.launchImageLibraryAsync({
                 quality: 0.6,
             });
@@ -100,14 +140,30 @@ export default function CaptureTab() {
         }
     };
 
+    /**
+     * Resets the capture form to initial state, clearing all selections.
+     */
     const handleCancel = () => {
-        // reset capture/manual form to initial blank state
+        // Reset capture/manual form to initial blank state
         setMode("initial");
         setPreviewUri(null);
         setPhotoUri(null);
         setError(null);
     };
 
+    /**
+     * Saves the meal to the database and uploads photo to S3 if present.
+     * 
+     * Process:
+     * 1. Create meal record in database with PROCESSING or MANUAL status
+     * 2. If photo exists, upload to S3 (triggers Lambda for AI analysis)
+     * 3. Update meal record with S3 photo key
+     * 4. Navigate to meal detail page
+     * 
+     * Status values:
+     * - PROCESSING: Photo uploaded, waiting for AI analysis
+     * - MANUAL: No photo, user will enter nutrition manually
+     */
     const handleSaveMeal = async () => {
         setIsSaving(true);
         setError(null);
@@ -115,11 +171,14 @@ export default function CaptureTab() {
         const client = await getGraphQLClient();
 
         try {
+            // Get current user ID for associating the meal
             const user = await getCurrentUser();
             const userId = user.userId || user.username;
             if (!userId) throw new Error("Not signed in");
 
-
+            // Create initial meal record
+            // Status is PROCESSING if photo exists (will be analyzed by AI)
+            // Status is MANUAL if no photo (user enters nutrition data)
             const createInput = {
                 date: new Date().toISOString(),
                 mealType,
@@ -146,21 +205,27 @@ export default function CaptureTab() {
             }
 
             let photoKey: string | undefined;
+            // Upload photo to S3 if present and storage is configured
             if (photoUri && isStorageConfigured()) {
+                // Convert photo URI to blob for upload
                 const response = await fetch(photoUri);
                 const blob = await response.blob();
                 const ext = photoUri.split(".").pop() || "jpg";
-                
+
+                // S3 path format: public/uploads/{mealId}.{extension}
+                // This path triggers the Lambda function for AI analysis
                 const path = `public/uploads/${newMealId}.${ext}`;
 
+                // Upload to S3 - this will trigger the MealImageProcessor Lambda
                 await uploadData({
                     path,
                     data: blob,
                     options: { contentType: (blob as any).type || "image/jpeg" },
                 }).result;
-                
+
                 photoKey = path;
 
+                // Update meal record with S3 photo key
                 const updateInput = {
                     id: newMealId,
                     photoKey: photoKey,
@@ -180,21 +245,24 @@ export default function CaptureTab() {
                 });
 
             } else if (photoUri && !isStorageConfigured()) {
+                // Storage not configured - show error message
                 setError(getStorageMissingMessage());
             }
 
 
+            // Navigate to meal detail page where user can see processing status
             router.replace({ pathname: "/meal/[id]", params: { id: newMealId } });
 
         } catch (e: any) {
             console.error("Failed to save meal:", e);
             setError(e?.message || "Failed to save meal");
 
+            // TODO: Consider updating meal status to ERROR on failure
             // const updateInput = {
             //     id: newMealId,
             //     status: 'ERROR',
             // };
-        
+
             // await client.graphql({
             //     query: /* GraphQL */ `
             //         mutation UpdateMeal($input: UpdateMealInput!) {
@@ -215,13 +283,13 @@ export default function CaptureTab() {
     if (!isSignedIn) {
         return (
             <ThemedView style={styles.container}>
-                <ThemedText type="title" style={{textAlign: 'center', marginBottom: 12}}>Account Required</ThemedText>
-                <ThemedText style={{textAlign: 'center', marginBottom: 20}}>
+                <ThemedText type="title" style={{ textAlign: 'center', marginBottom: 12 }}>Account Required</ThemedText>
+                <ThemedText style={{ textAlign: 'center', marginBottom: 20 }}>
                     Please sign in or create an account to capture meals. Guest mode will be available in a future version.
                 </ThemedText>
-                <View style={{width: '60%'}}>
+                <View style={{ width: '60%' }}>
                     <Button title="Sign In" onPress={() => router.push('/auth/sign-in')} />
-                    <View style={{height: 12}} />
+                    <View style={{ height: 12 }} />
                     <Button title="Sign Up" onPress={() => router.push('/auth/sign-up')} />
                 </View>
             </ThemedView>
@@ -230,9 +298,9 @@ export default function CaptureTab() {
 
     return (
         <ThemedView style={styles.container}>
-            <View style={{ flex: 1, width: "100%", margin:20 }}>
+            <View style={{ flex: 1, width: "100%", margin: 20 }}>
                 {mode === "initial" ? (
-                    <View style={{padding: 26}}>
+                    <View style={{ padding: 26 }}>
                         <ThemedText type="title">Capture a meal</ThemedText>
                         <ThemedText style={{ marginTop: 8 }}>
                             Choose an action below to begin
@@ -296,8 +364,8 @@ export default function CaptureTab() {
                                             </Picker>
                                         </View>
                                     </View>
-                                    
-                                    {error ? <Text style={{color: 'red', marginVertical: 10}}>{error}</Text> : null}
+
+                                    {error ? <Text style={{ color: 'red', marginVertical: 10 }}>{error}</Text> : null}
 
                                     <View style={{ marginTop: 20, marginBottom: 20 }}>
                                         {isSaving ? (
@@ -309,8 +377,8 @@ export default function CaptureTab() {
                                             />
                                         )}
                                     </View>
-                                    <ThemedText style={{textAlign: 'center', fontSize: 12}}>
-                                        {photoUri 
+                                    <ThemedText style={{ textAlign: 'center', fontSize: 12 }}>
+                                        {photoUri
                                             ? "After saving, your meal will be analyzed by our AI to estimate its nutritional content. You can see the results on the meal detail page."
                                             : "You will be able to add ingredients and nutritional information on the next screen."
                                         }
