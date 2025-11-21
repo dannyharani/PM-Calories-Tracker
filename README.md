@@ -61,8 +61,6 @@ Before you begin, ensure you have the following installed and configured. Where 
 	- Install globally via npm (or use `npx`/`corepack` if you prefer not to install globally):
 		```bash
 		npm install -g expo-cli
-		# or run locally using npx
-		npx expo start
 		```
 	- Docs: https://docs.expo.dev/
 	- Verify:
