@@ -83,7 +83,7 @@ Before you begin, ensure you have the following installed and configured. Where 
 		amplify --version
 		```
 
-Notes:
+Notes (Only if you plan on contributing):
 - You will need an AWS account to run `amplify pull` (the app uses Amplify-managed backend resources). If you don't have one, create one at https://aws.amazon.com/.
 - On Windows, run the PowerShell prompt as Administrator for global npm installs if you run into permission issues, or use a Node version manager like nvm-windows.
 - If you prefer not to install global CLIs, you can use `npx expo start` and `npx @aws-amplify/cli <command>` to run them via npx.
