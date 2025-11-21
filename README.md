@@ -103,7 +103,7 @@ Install the necessary frontend packages:
 npm install
 ```
 
-### 3. Connect to AWS Amplify
+### 3. Connect to AWS Amplify (If you Plan on Contributing)
 To sync your local environment with the deployed AWS resources (API keys, Auth settings, etc.), you need to pull the backend configuration.
 
 *Note: This requires an AWS account with the appropriate permissions.*
